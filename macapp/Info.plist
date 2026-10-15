@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+ <key>CFBundleName</key><string>Vision Lab</string>
+ <key>CFBundleDisplayName</key><string>Vision Lab</string>
+ <key>CFBundleIdentifier</key><string>com.houghtonlabs.visionlab</string>
+ <key>CFBundleExecutable</key><string>VisionLab</string>
+ <key>CFBundleIconFile</key><string>AppIcon</string>
+ <key>CFBundlePackageType</key><string>APPL</string>
+ <key>CFBundleShortVersionString</key><string>1.0</string>
+ <key>CFBundleVersion</key><string>1</string>
+ <key>LSMinimumSystemVersion</key><string>13.0</string>
+ <key>NSHighResolutionCapable</key><true/>
+ <key>NSScreenCaptureUsageDescription</key><string>Vision Lab captures your screen every 10 seconds for local-only activity captions (never exported).</string>
+ <key>NSMicrophoneUsageDescription</key><string>Vision Lab listens for local voice chat with your assistant.</string>
+ <key>NSCameraUsageDescription</key><string>Vision Lab watches the desk camera for local scene captions and zones.</string>
+</dict></plist>

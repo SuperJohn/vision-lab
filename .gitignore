@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+data/
+weights/
+*.pt
+.DS_Store
