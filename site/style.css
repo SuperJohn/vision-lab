@@ -1,0 +1,16 @@
+:root{--bg:#0d1117;--fg:#e6edf3;--mut:#9aa7b4;--acc:#4ea8de;--card:#161b22}
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg)}
+.hero{padding:72px 24px 48px;text-align:center;background:radial-gradient(circle at 50% 0,#1f3a5a,transparent 70%)}
+.hero h1{font-size:3rem;margin:0}.hero p{max-width:680px;margin:16px auto;color:var(--mut);font-size:1.15rem}
+.btn{display:inline-block;padding:10px 20px;border-radius:8px;background:var(--acc);color:#000;text-decoration:none;font-weight:600}
+main{max-width:1000px;margin:auto;padding:0 20px}section{margin:56px 0}h2{border-bottom:1px solid #30363d;padding-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.card{background:var(--card);padding:16px;border-radius:10px}.card h3{margin-top:0;color:var(--acc)}
+video{width:100%;border-radius:10px;background:#000}.note{color:var(--mut);font-size:.9rem}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}.gallery figure{margin:0;background:var(--card);border-radius:10px;overflow:hidden}
+.gallery img{width:100%;display:block}.gallery figcaption{padding:8px 10px;font-size:.88rem;color:var(--mut)}.tag{display:inline-block;background:#21262d;border-radius:4px;padding:0 6px;margin:2px;font-size:.78rem;color:var(--fg)}
+.arch{width:100%;background:var(--card);border-radius:10px}.arch text{fill:var(--fg);font-size:14px;text-anchor:middle}.arch text.s{fill:var(--mut);font-size:11px}
+.arch rect{rx:8;stroke-width:1.5}.cap rect{fill:#1d2b3a;stroke:#4ea8de}.fast rect{fill:#1d3a2b;stroke:#80ed99}.slow rect{fill:#2e1d3a;stroke:#c77dff}.db rect{fill:#3a311d;stroke:#ffd166}.out rect{fill:#21262d;stroke:#9aa7b4}.priv rect{fill:#3a1d1d;stroke:#ff5a5f}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.bar{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:8px;margin:5px 0;font-size:.88rem}.bar i{display:block;height:16px;border-radius:4px;background:var(--acc)}.bar span:last-child{color:var(--mut);text-align:right}
+table{border-collapse:collapse;width:100%}td{padding:6px 10px;border-bottom:1px solid #30363d}td:first-child{color:var(--mut)}
+footer{text-align:center;padding:40px;color:var(--mut)}footer a{color:var(--acc)}

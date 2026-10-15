@@ -1,0 +1,203 @@
+{
+ "stress": {
+  "stage_select_s": 0.005,
+  "candidates": 36,
+  "vlm_model": "gemma4:26b (Ollama, MLX runner)",
+  "vlm_total_s": 30.9,
+  "vlm_p50_s": 0.92,
+  "vlm_p95_s": 0.98,
+  "imgs_per_min": 69.8,
+  "tok_per_s": 150.7,
+  "ollama_resident_gb": 25,
+  "mem_free_pct_after": "75%",
+  "passed_privacy": 16,
+  "selected": 7,
+  "annotate_s": 0.13,
+  "encode_mp4_s": 0.31,
+  "encode_webm_s": 3.97,
+  "hist_gemma4_ms": 905,
+  "hist_detect_ms": 423,
+  "hist_gemma4_n": 2332
+ },
+ "labels": [
+  [
+   "empty",
+   1171
+  ],
+  [
+   "couch",
+   606
+  ],
+  [
+   "at_desk",
+   368
+  ],
+  [
+   "browsing",
+   267
+  ],
+  [
+   "work",
+   186
+  ],
+  [
+   "idle_screen",
+   151
+  ],
+  [
+   "chat",
+   97
+  ],
+  [
+   "away",
+   61
+  ],
+  [
+   "kitchen",
+   35
+  ],
+  [
+   "email_admin",
+   17
+  ],
+  [
+   "dog_only",
+   10
+  ],
+  [
+   "social",
+   9
+  ],
+  [
+   "video",
+   7
+  ],
+  [
+   "door",
+   7
+  ]
+ ],
+ "kinds": [
+  [
+   "track",
+   65987
+  ],
+  [
+   "scene",
+   10760
+  ],
+  [
+   "frame_probe",
+   8273
+  ],
+  [
+   "desktop_sample",
+   8273
+  ],
+  [
+   "activity_slice",
+   826
+  ],
+  [
+   "rule",
+   678
+  ],
+  [
+   "posture",
+   520
+  ],
+  [
+   "zone",
+   156
+  ]
+ ],
+ "assets": [
+  {
+   "file": "frame0_annotated.jpg",
+   "source": "1791680242971.jpg",
+   "label": "empty",
+   "caption": "A modern open-concept living area and kitchen with light wood flooring and neutral tones.",
+   "score": 7,
+   "dets": [
+    "chair",
+    "couch",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame1_annotated.jpg",
+   "source": "1791766184646.jpg",
+   "label": "empty",
+   "caption": "A wide shot of a modern apartment interior featuring a living area and an open kitchen.",
+   "score": 7,
+   "dets": [
+    "couch",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame2_annotated.jpg",
+   "source": "1791675136883.jpg",
+   "label": "kitchen",
+   "caption": "A living room area with a grey sofa transitions into an open kitchen and dining space.",
+   "score": 5,
+   "dets": [
+    "chair",
+    "couch",
+    "dog",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame3_annotated.jpg",
+   "source": "1791675066779.jpg",
+   "label": "dog_only",
+   "caption": "A living room and kitchen area with a light gray sofa and a small dog on the floor.",
+   "score": 7,
+   "dets": [
+    "chair",
+    "couch",
+    "dog",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame4_annotated.jpg",
+   "source": "1791684335673.jpg",
+   "label": "dog_only",
+   "caption": "A small dog stands on the floor of a living room and kitchen area.",
+   "score": 5,
+   "dets": [
+    "chair",
+    "couch",
+    "dog",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame5_annotated.jpg",
+   "source": "1791673248934.jpg",
+   "label": "dog_only",
+   "caption": "A living room and kitchen area are shown in an open floor plan layout.",
+   "score": 7,
+   "dets": [
+    "chair",
+    "couch",
+    "dog",
+    "refrigerator"
+   ]
+  },
+  {
+   "file": "frame6_annotated.jpg",
+   "source": "1791775560498.jpg",
+   "label": "at_desk",
+   "caption": "A wide shot of a modern open-concept living area and kitchen.",
+   "score": 7,
+   "dets": [
+    "chair",
+    "couch",
+    "refrigerator"
+   ]
+  }
+ ]
+}
