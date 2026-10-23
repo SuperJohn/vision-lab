@@ -1,0 +1,14 @@
+#!/bin/zsh
+# vlab <command> .... Commands: find
+# Runs from this checkout with the repo venv; reads vlab.db read-only. A worktree without its own data/
+# uses the live data in ~/Projects/vision-lab/data (VLAB_DB / VLAB_SCREENS_DIR / PLANLOOP_CONFIG override).
+here="${0:A:h:h}"
+py="$here/.venv/bin/python"; [ -x "$py" ] || py="$HOME/Projects/vision-lab/.venv/bin/python"
+data="$here/data"; [ -f "$data/vlab.db" ] || data="$HOME/Projects/vision-lab/data"
+export VLAB_DB="${VLAB_DB:-$data/vlab.db}" VLAB_SCREENS_DIR="${VLAB_SCREENS_DIR:-$data/screens}"
+export PLANLOOP_CONFIG="${PLANLOOP_CONFIG:-$data/planloop.json}" HF_HUB_OFFLINE=1
+cmd="$1"; shift 2>/dev/null
+case "$cmd" in
+  find) cd "$here" && exec "$py" -m vision_lab.find "$@" ;;
+  *) echo "usage: vlab find \"<what you said>\" [--days N] [--since YYYY-MM-DD] [--json] [--export N]"; exit 2 ;;
+esac

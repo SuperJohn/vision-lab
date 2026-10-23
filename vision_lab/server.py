@@ -15,7 +15,7 @@ from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import llm, mic, multimodal, voice
+from . import captures, catalog, llm, mic, multimodal, recording, voice, voicelog
 from .bootinfo import BOOT_ID, install_no_cache, render_index, with_boot_id
 from .engine import DEPTH_MODEL, Engine, color_for
 from .store import Store
@@ -24,10 +24,12 @@ STATIC = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Vision Lab")
 app.include_router(voice.router)
 app.include_router(mic.router)
+app.include_router(voicelog.router)
+app.include_router(captures.router)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
-install_no_cache(app)   # HOU-146: browsers re-check UI files (no-cache, must-revalidate)
+install_no_cache(app)   # browsers re-check UI files (no-cache, must-revalidate)
 
 store = Store()
 engine = Engine(store)
@@ -35,24 +37,33 @@ voice.HOOKS["sink"] = lambda ev: multimodal.store_voice_event(store, engine, ev)
 voice.HOOKS["context"] = lambda q: multimodal.vision_context(store, engine, q)
 voice.HOOKS["gpu_lock"] = engine.models.lock
 mic.STORE["store"] = store
+mic.PRIVACY["on"] = lambda: bool(engine.settings.get("capture_paused"))
+voicelog.STORE["store"] = store
+captures.STORE["store"] = store
+REC = recording.RecordingMode(engine, store)   # one switch for mic, camera video and screen
+voicelog.CAPTURE["state"] = lambda: {"privacy": mic.privacy_on(), "mic_enabled": mic.enabled(),
+                                     "recording_mode": REC.status()["active"]}
 voice.HOOKS["mic_enabled"] = mic.enabled
 try:
     mic.ensure_default()
 except Exception as e:
     print(f"[mic] device scan failed: {e}")
 multimodal.import_jsonl(store)   # idempotent: rows already in the DB are skipped
+REC.start()                      # no-op unless VLAB_RECORDING_MODE=1 (run.sh sets it for the app)
 
-CATALOG = [
-    {"key": "yolo11n", "task": "Detect", "name": "YOLO11n", "gives": "80 everyday classes, fastest", "kind": "yolo"},
-    {"key": "yolo11s", "task": "Detect", "name": "YOLO11s", "gives": "80 everyday classes, more accurate", "kind": "yolo"},
-    {"key": "yolov8s-worldv2", "task": "Detect", "name": "YOLO-World v2", "gives": "Detect anything you type", "kind": "yolo"},
-    {"key": "yolo11s-seg", "task": "Segment", "name": "YOLO11s-seg", "gives": "Outline of each object", "kind": "yolo"},
-    {"key": "sam2.1_b", "task": "Segment", "name": "SAM 2.1 base", "gives": "Click an object to outline it", "kind": "sam"},
-    {"key": "bytetrack", "task": "Track", "name": "ByteTrack", "gives": "Stable IDs across frames", "kind": "builtin"},
-    {"key": "yolo11s-pose", "task": "Pose", "name": "YOLO11s-pose", "gives": "17 body keypoints per person", "kind": "yolo"},
-    {"key": "depth", "task": "Depth", "name": "Depth Anything V2 Small", "gives": "Near and far, per pixel", "kind": "depth"},
-    {"key": "siglip", "task": "Search", "name": "SigLIP base", "gives": "Find keyframes by text", "kind": "siglip"},
-]
+
+@app.on_event("shutdown")
+def _stop_recording_mode():
+    REC.shutdown()
+
+
+@app.get("/api/recording")
+def recording_state():
+    """Read-only: is recording mode on, and which captures are running."""
+    return REC.status()
+
+# Model lab catalog: plain-language rows, in-use detection and benchmarks live in catalog.py.
+CATALOG = [{k: v for k, v in e.items() if k != "published"} for e in catalog.ENTRIES]
 SUGGESTED_VLM = "qwen3-vl:8b"
 bench_results = {}
 
@@ -141,7 +152,7 @@ def snapshot():
 
 @app.post("/api/power")
 def power(body: dict = Body(...)):
-    """HOU-146: the Privacy mode toggle; on = camera, screen and mic all stopped."""
+    """the Privacy mode toggle; on = camera, screen and mic all stopped."""
     return engine.set_capture_paused(not body.get("on"))
 
 
@@ -161,6 +172,7 @@ def privacy(body: dict = Body(...)):
 def shutdown():
     """Stop the server process, closing any recording cleanly first."""
     engine.camera.stop_recording()
+    REC.shutdown(drain_s=5)
     threading.Timer(0.3, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
     return {"stopping": True}
 
@@ -250,24 +262,28 @@ def search(q: str, range: str = "today"):
 
 
 @app.get("/api/timeline")
-def timeline(range: str = "today"):
-    since = day_start(range)
+def timeline(range: str = "today", start: float | None = None, end: float | None = None):
+    """Object activity lanes. Optional start/end (epoch s) pick any window (the Timeline's shared scale)."""
+    since = start if start is not None else day_start(range)
+    until = end if end is not None and end > since else since + (7 if range == "week" and start is None else 1) * 86400
     lanes = {}
     for s in store.spans(since):
-        if s["end"] - s["start"] < 3:
+        if s["start"] >= until or s["end"] - s["start"] < 3:
             continue
         segs = lanes.setdefault(s["cls"], [])
         start = max(s["start"], since)
+        stop = min(s["end"], until)
         if segs and start <= segs[-1][1] + 30:
-            segs[-1][1] = max(segs[-1][1], s["end"])
+            segs[-1][1] = max(segs[-1][1], stop)
         else:
-            segs.append([start, s["end"]])
-    rules = [e["ts"] for e in store.events(since, 1000) if e["kind"] == "rule"]
+            segs.append([start, stop])
+    rules = [r["ts"] for r in store._query("SELECT ts FROM events WHERE kind = 'rule' AND ts >= ? AND ts < ? "
+                                           "ORDER BY ts DESC LIMIT 1000", (since, until))]
     out = [{"cls": c, "color": color_for(c), "spans": v,
             "seconds": round(sum(b - a for a, b in v))} for c, v in lanes.items()]
     out.sort(key=lambda l: -l["seconds"])
-    marks = store.merged(since, modalities=["audio", "voice"], limit=2000)
-    return {"start": since, "end": since + (7 if range == "week" else 1) * 86400,
+    marks = store.merged(since, until, modalities=["audio", "voice"], limit=2000)
+    return {"start": since, "end": until,
             "lanes": out[:8], "rules": rules,
             "audio": [r["ts"] for r in marks if r["modality"] == "audio"],
             "voice": [r["ts"] for r in marks if r["modality"] == "voice"]}
@@ -304,7 +320,7 @@ def _screens_db():
 
 @app.get("/api/screens")
 def screens(date: str = "", limit: int = 200):
-    """Local-only (HOU-68): captioned screenshots from batch_annotations, newest first. date=YYYY-MM-DD (local)."""
+    """Local-only: captioned screenshots from batch_annotations, newest first. date=YYYY-MM-DD (local)."""
     db, _ = _screens_db()
     try:
         if date:
@@ -341,7 +357,7 @@ def export(format: str = "jsonl", since: float = 0, until: float = 0, modality: 
     """Everything in one table for ingestion: JSONL (default) or Parquet."""
     rows = store.merged(since, until or None, _mods(modality), None, limit)
     rows.reverse()
-    for r in rows:   # HOU-68: screen captures/captions are local-only, never exported
+    for r in rows:   # screen captures/captions are local-only, never exported
         d = r.get("data")
         if isinstance(d, dict) and "screen" in d:
             r["data"] = {k: v for k, v in d.items() if k != "screen"}
@@ -396,27 +412,120 @@ def summary(body: dict = Body(default={})):
 
 # ---------- model lab ----------
 def model_status(entry):
-    k = entry["kind"]
+    k, key = entry["kind"], entry["key"]
     if k in ("yolo", "sam"):
-        return engine.models.weights_present(entry["key"])
+        return engine.models.weights_present(key)
     if k == "depth":
         return engine.models.hf_present(DEPTH_MODEL)
     if k == "siglip":
         return engine.models.hf_present(llm.Embedder.MODEL)
+    if key == "whisper-large-v3-turbo":
+        return engine.models.hf_present(voice.SETTINGS["stt_model"])
+    if key == "ast-audioset":
+        return engine.models.hf_present(voice.SETTINGS["ambient_model"])
+    if key == "minilm":
+        return engine.models.hf_present("sentence-transformers/all-MiniLM-L6-v2")
+    if key == "kokoro":
+        return (voice.KOKORO_DIR / "kokoro-v1.0.onnx").exists()
+    if key == "silero-vad":
+        import importlib.util
+        return importlib.util.find_spec("silero_vad") is not None
     return True
+
+
+def _read_cfg(defaults, path):
+    """Read a JSON config over its defaults WITHOUT writing (planloop/batch loaders create the file if missing)."""
+    cfg = dict(defaults)
+    try:
+        if path and os.path.exists(path):
+            cfg.update(json.load(open(path)))
+    except Exception:
+        pass
+    return cfg
+
+
+def _running_processes():
+    out = {"planloop": False, "batch": False}
+    for p in psutil.process_iter(["cmdline"]):
+        try:
+            cmd = " ".join(p.info["cmdline"] or [])
+        except Exception:
+            continue
+        if "vision_lab.planloop" in cmd and " run" in cmd:
+            out["planloop"] = True
+        if "vision_lab.batch" in cmd:
+            out["batch"] = True
+    return out
+
+
+def _whisper_loaded():
+    import sys
+    mod = sys.modules.get("mlx_whisper.transcribe")
+    holder = getattr(mod, "ModelHolder", None)
+    return bool(holder is not None and getattr(holder, "model", None) is not None)
+
+
+def catalog_context(ollama_loaded=None):
+    """Everything catalog.usage() needs, read from live config and memory. Read-only; each part fails soft."""
+    from vision_lab import batch, planloop
+    s = engine.settings
+    pl = _read_cfg(planloop.DEFAULTS, planloop.CONFIG_PATH)
+    bt = _read_cfg(batch.DEFAULTS, batch.CFG_PATH)
+    try:
+        rec = REC.status()
+        voice_rec = bool(rec.get("active") and (rec.get("components", {}).get("mic") or {}).get("running"))
+    except Exception:
+        voice_rec = False
+    if ollama_loaded is None:
+        ollama_loaded = [m["name"] for m in llm.loaded_models()]
+    return {
+        "settings": s, "voice": dict(voice.SETTINGS), "planloop": pl, "batch": bt,
+        "processes": _running_processes(),
+        "engine_cache": list(engine.models.cache.keys()),
+        "embedder_loaded": engine.embedder.model is not None,
+        "voice_loaded": list(voice._models.keys()), "whisper_loaded": _whisper_loaded(),
+        "voice_log_recording": voice_rec, "ollama_loaded": ollama_loaded,
+        "describe_model": s.get("describe_model"), "summary_model": s.get("summary_model"),
+        "voice_llm": voice.SETTINGS.get("llm_model"),
+        "batch_model": s.get("describe_model") or bt.get("model"),
+        "planloop_model": pl.get("caption_model") if (pl.get("screen_caption") or pl.get("screen_fast_caption")) else None,
+    }
 
 
 @app.get("/api/models")
 def models():
-    rows = [{**c, "installed": model_status(c), "hw": "CPU" if c["kind"] == "builtin" else "GPU",
-             "bench": bench_results.get(c["key"])} for c in CATALOG]
-    names = [m["name"] for m in llm.list_models()]
+    tags = llm.list_models()
+    names = [m["name"] for m in tags]
+    sizes = {m["name"]: m.get("size") for m in tags}
+    ps = llm.loaded_models()
+    ctx = catalog_context([m["name"] for m in ps])
+    measured = catalog.load_measured()
+    rows = []
+    for c in CATALOG:
+        rows.append({**c, "installed": model_status(c), "bench": bench_results.get(c["key"]),
+                     "benchable": catalog.benchable(c), "usage": catalog.usage(c["key"], ctx),
+                     "benchmarks": catalog.benchmarks(c["key"], measured, bench_results.get(c["key"])),
+                     "measure_note": catalog.measure_note(c["key"], measured)})
     vlms = [n for n in names if "vision" in llm.capabilities(n)]
-    for n in vlms + ([SUGGESTED_VLM] if SUGGESTED_VLM not in names else []):
-        rows.append({"key": n, "task": "Describe", "name": n, "kind": "ollama", "hw": "GPU",
-                     "gives": "Sentences about the scene" if n in vlms else "Newer vision model (Ollama)",
-                     "installed": n in names, "pulling": n in engine.pulling,
-                     "bench": bench_results.get(n)})
+    used = {ctx.get(f) for f, _, _ in catalog.LLM_FEATURES}
+    texts = [n for n in names if n not in vlms and n in used]   # text-only models only when a feature uses them
+    for n in vlms + texts + ([SUGGESTED_VLM] if SUGGESTED_VLM not in names else []):
+        e = catalog.llm_entry(n, n not in texts, n in names)
+        if n not in names:
+            e["task"] = "Suggested: a newer, smaller vision model to compare"
+            e["gives"] = "Download it, then pick it for scene captions to compare speed and wording"
+        b = catalog.benchmarks(n, measured, bench_results.get(n))
+        if sizes.get(n):
+            b.insert(0, {"label": "Size on disk", "value": f"{sizes[n] / 1e9:.1f} GB", "kind": "measured",
+                         "date": "now", "machine": measured.get("machine"), "note": "Ollama model list"})
+        live = next((m for m in ps if m["name"] == n), None)
+        if live and live.get("size_vram"):
+            b.insert(1, {"label": "Memory while loaded", "value": f"{live['size_vram'] / 1e9:.1f} GB",
+                         "kind": "measured", "date": "now", "machine": measured.get("machine"),
+                         "note": "Ollama /api/ps"})
+        rows.append({**e, "pulling": n in engine.pulling, "bench": bench_results.get(n), "benchable": True,
+                     "usage": catalog.usage(n, ctx), "benchmarks": b,
+                     "measure_note": catalog.measure_note(n, measured)})
     return rows
 
 
@@ -456,8 +565,11 @@ def _bench_yolo(key, frame, n=20):
 
 @app.post("/api/benchmark")
 def benchmark(body: dict = Body(...)):
-    key, frame = body["key"], current_frame()
+    key = body["key"]
     entry = next((c for c in CATALOG if c["key"] == key), {"kind": "ollama"})
+    if not catalog.benchable(entry):
+        raise HTTPException(400, f"{key} isn't benchmarked on the camera frame; see tools/bench_catalog.py")
+    frame = current_frame()
     try:
         if entry["kind"] in ("yolo", "sam"):
             fps = _bench_yolo(key, frame)
@@ -498,6 +610,8 @@ def benchmark(body: dict = Body(...)):
 def download(body: dict = Body(...)):
     key = body["key"]
     entry = next((c for c in CATALOG if c["key"] == key), {"kind": "ollama"})
+    if entry["kind"] in ("info", "builtin"):
+        raise HTTPException(400, f"{key} is installed with Vision Lab's Python packages, not from here")
     if entry["kind"] == "ollama":
         def run():
             engine.pulling.add(key)

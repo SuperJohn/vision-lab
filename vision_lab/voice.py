@@ -40,7 +40,7 @@ SETTINGS = {
     "min_speech_ms": 250,
     "partial_every_ms": 700,
     "grok_voice_enabled": False,     # cloud toggle: stub only, deliberately not wired
-    "ambient": True,                 # classify room sounds while the mic is open
+    "ambient": False,                # room-sound classifier (AST) is off, not part of voice capture
     "ambient_model": "MIT/ast-finetuned-audioset-10-10-0.4593",
     "ambient_every_ms": 1000,
     "ambient_min_conf": 0.25,
@@ -61,9 +61,9 @@ AMBIENT_GROUPS = {
 AMBIENT_COOLDOWN = {"speech": 30, "music": 60, "water": 30}   # seconds between repeat events; default 8
 # Set by the server: sink(event) stores events in vlab.db; context(question) returns recent vision context.
 HOOKS = {"sink": None, "context": None, "gpu_lock": None, "mic_enabled": None}
-SYSTEM = ("You are a voice assistant running locally on John's Mac Studio, talking with John out loud. "
+SYSTEM = ("You are a voice assistant running locally on this Mac, talking with the user out loud. "
           "Answer directly in one or two short, natural spoken sentences. Do not editorialize or talk "
-          "about John in the third person. No markdown, lists, emoji or code. If unsure, say so briefly.")
+          "about the user in the third person. No markdown, lists, emoji or code. If unsure, say so briefly.")
 
 router = APIRouter()
 EVENTS = collections.deque(maxlen=500)
@@ -348,8 +348,8 @@ class Session:
                 ctx = f"(home camera data unavailable: {e})"
             m["context_ms"] = round((time.time() - t0) * 1000)
             m["context_chars"] = len(ctx)
-            system += ("\nYou can also see John's apartment through the home camera. Use this log only when "
-                       "relevant; if it doesn't say, say you didn't see it. The dog is John's dog.\n" + ctx)
+            system += ("\nYou can also see the room through the home camera. Use this log only when "
+                       "relevant; if it doesn't say, say you didn't see it.\n" + ctx)
         msgs = [{"role": "system", "content": system}] \
             + self.history + [{"role": "user", "content": text}]
         body = {"model": SETTINGS["llm_model"], "messages": msgs, "stream": True, "keep_alive": "30m", "think": False,

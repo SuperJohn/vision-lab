@@ -36,9 +36,9 @@ DDL = """CREATE TABLE IF NOT EXISTS batch_annotations (
   gemma_ms INTEGER, detect_ms INTEGER, status TEXT, error TEXT, UNIQUE(source_type, source_path));
 CREATE INDEX IF NOT EXISTS batch_ann_capture ON batch_annotations(source_type, capture_ts);"""
 PROMPTS = {
-    "screen": "No preamble. Reply exactly as '<label> - <sentence>'. Screenshot of John's Mac. Start with one label from: work, email_admin, chat, browsing, video, social, "
+    "screen": "No preamble. Reply exactly as '<label> - <sentence>'. Screenshot of the user's Mac. Start with one label from: work, email_admin, chat, browsing, video, social, "
               "game, idle_screen. Then ' - ' and one sentence on what is on screen (apps, document/site, task).",
-    "keyframe": "No preamble. Reply exactly as '<label> - <sentence>'. Home camera frame (camera sits on John's desk, looking at the room: couch left, kitchen right, front "
+    "keyframe": "No preamble. Reply exactly as '<label> - <sentence>'. Home camera frame (camera sits on the desk, looking at the room: couch left, kitchen right, front "
                 "door center). Start with one label from: at_desk, couch, kitchen, door, away, dog_only, empty. Then ' - ' "
                 "and one sentence: who is where, doing what.",
 }
@@ -71,7 +71,7 @@ def connect():
     db.executescript(DDL)
     have = {r[1] for r in db.execute("PRAGMA table_info(batch_annotations)")}
     for col, typ in (("sensitive", "INTEGER NOT NULL DEFAULT 0"), ("exportable", "INTEGER NOT NULL DEFAULT 1")):
-        if col not in have:   # HOU-68: screens are sensitive, local-only, never exported
+        if col not in have:   # screens are sensitive, local-only, never exported
             db.execute(f"ALTER TABLE batch_annotations ADD COLUMN {col} {typ}")
     db.execute("UPDATE batch_annotations SET sensitive=1, exportable=0 WHERE source_type='screen' AND exportable!=0")
     db.commit()
@@ -79,7 +79,7 @@ def connect():
 
 
 def ingest_tags(kind):
-    """HOU-68 tags applied at ingest. Screens can show anything (mail, banking, chats): local-only."""
+    """tags applied at ingest. Screens can show anything (mail, banking, chats): local-only."""
     return {"sensitive": 1, "exportable": 0} if kind == "screen" else {"sensitive": 0, "exportable": 1}
 
 

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# HOU-88 publish gate: run before making the repo public. Exits non-zero on any finding.
+# Publish gate: run before making the repo public. Exits non-zero on any finding.
 # Usage: [VLAB_DATA=path/to/data] scripts/publish_gate.sh   (needs: brew install gitleaks)
 set -u
 cd "$(dirname "$0")/.."

@@ -41,15 +41,18 @@ DEFAULTS = {
     "desk_box_area": 0.12,          # person box covering >= this share of frame = at the desk (camera is at the desk)
     "camera_probe": True,
     "screen_capture": True,         # full-screen JPEG every screen_every_s into data/screens/YYYY-MM-DD/
+    "screenrec": False,             # continuous full-screen video in screenrec_window (vision_lab/screenrec.py)
+    "screenrec_dir": None,          # recorder output dir; None = data/screenrec (or $VLAB_SCREENREC_DIR)
+    "screenrec_window": None,       # "YYYY-MM-DDTHH:MM/YYYY-MM-DDTHH:MM:SS" PT; None = screenrec.DEFAULT_WINDOW
     "screen_every_s": 10,           # screen capture cadence (desktop/camera samples stay on sample_every_s)
     "screen_fast_caption": True,    # caption each new (non-duplicate) screen via vision_lab.batch fast lane
     "screen_dedup_bits": 4,         # skip a frame whose 64-bit dHash is within this many bits of the last kept one
-    "screen_width": 1280, "screen_quality": 60, "screen_keep_days": 7,
+    "screen_width": 1280, "screen_quality": 60, "screen_keep_days": None,   # screens are kept forever
     "screen_caption": True,         # one gemma3 caption of the latest screen per 5-min slice
     "caption_model": os.environ.get("VLAB_MODEL", "gemma4:26b"), "ollama_url": "http://127.0.0.1:11434",
     "probe_model": "weights/yolo11n.pt",
     "work_apps": ["Code", "Cursor", "Terminal", "iTerm2", "Xcode", "GitHub Desktop", "Pages", "Numbers", "Microsoft Word",
-                  "Microsoft Excel", "Preview", "Mail", "Notes", "Linear", "Finder", "Calendar", "Grok Bot", "Boppy"],
+                  "Microsoft Excel", "Preview", "Mail", "Notes", "Linear", "Finder", "Calendar"],
     "call_apps": ["zoom.us", "FaceTime", "Microsoft Teams", "Webex", "Discord", "Slack Huddle", "Phone"],
     "distraction_title_words": ["youtube", "netflix", "reddit", "twitter", " x.com", "instagram", "facebook", "tiktok",
                                 "hulu", "twitch", "prime video"],
@@ -65,9 +68,9 @@ DEFAULTS = {
     "zone_activity": {"couch": "couch", "island": "kitchen", "kitchen": "kitchen", "dog bowls": "kitchen",
                       "front door": "away"},
     # which guesses count as on-plan for a block's zone
-    "zone_accepts": {"desk": ["at_desk_work", "on_call", "talking_to_boppy"], "kitchen": ["kitchen"],
-                     "couch": ["couch"], "out": ["away"], "phone": ["on_call", "at_desk_work", "talking_to_boppy", "away"],
-                     "any": ["at_desk_work", "at_desk_other", "couch", "kitchen", "away", "on_call", "talking_to_boppy"]},
+    "zone_accepts": {"desk": ["at_desk_work", "on_call", "talking_to_assistant"], "kitchen": ["kitchen"],
+                     "couch": ["couch"], "out": ["away"], "phone": ["on_call", "at_desk_work", "talking_to_assistant", "away"],
+                     "any": ["at_desk_work", "at_desk_other", "couch", "kitchen", "away", "on_call", "talking_to_assistant"]},
 }
 
 PLAN_DDL = """
@@ -253,11 +256,17 @@ def dhash(img):
 
 
 def prune_screens(cfg):
+    """Retention rule: screen captures are kept forever. Pruning only runs if it is explicitly
+    re-enabled with screen_prune: true AND screen_keep_days > 0; an old screen_keep_days alone does nothing."""
     import shutil
-    cutoff = (datetime.now() - timedelta(days=cfg["screen_keep_days"])).strftime("%Y-%m-%d")
+    days = cfg.get("screen_keep_days")
+    if cfg.get("screen_prune") is not True or not days or days <= 0:
+        return 0
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     for d in SCREEN_DIR.glob("20??-??-??"):
         if d.name < cutoff:
             shutil.rmtree(d, ignore_errors=True)
+    return 1
 
 
 def caption_screen(cfg, path):
@@ -265,7 +274,7 @@ def caption_screen(cfg, path):
     body = {"model": cfg["caption_model"], "stream": False, "think": False, "keep_alive": "30m",
             "options": {"num_predict": 60, "temperature": 0},
             "messages": [{"role": "user", "images": [base64.b64encode(open(path, "rb").read()).decode()],
-                          "content": "No preamble. Reply exactly as '<label> - <description>'. This is a screenshot of John's Mac. Reply with one label from: work, email_admin, "
+                          "content": "No preamble. Reply exactly as '<label> - <description>'. This is a screenshot of the user's Mac. Reply with one label from: work, email_admin, "
                                      "chat, browsing, video, social, game, idle_screen, then ' - ' and a short description."}]}
     req = urllib.request.Request(cfg["ollama_url"] + "/api/chat", json.dumps(body).encode(), {"Content-Type": "application/json"})
     return json.loads(urllib.request.urlopen(req, timeout=120).read())["message"]["content"].strip()
@@ -286,7 +295,7 @@ def _fast_caption(path, ts):
 
 
 def capture_paused(db_path=None):
-    """HOU-146: Vision Lab's Privacy mode flag (config 'settings'.capture_paused), read fresh each tick."""
+    """Vision Lab's Privacy mode flag (config 'settings'.capture_paused), read fresh each tick."""
     try:
         con = sqlite3.connect(db_path or DB_PATH, timeout=5)
         try:
@@ -312,7 +321,7 @@ def screen_tick(cfg):
         s = screen_capture(cfg, now)
     except Exception as e:
         s = {"ok": False, "error": str(e)[:200]}
-    s.update(sensitive=True, exportable=False)   # HOU-68: local-only
+    s.update(sensitive=True, exportable=False)   # local-only
     _last_screen = s
     if s.get("path") and cfg.get("screen_fast_caption", True) and cfg.get("screen_caption", True):
         if _cap_thread is None or not _cap_thread.is_alive():
@@ -505,7 +514,7 @@ def classify(db, cfg, t0, t1):
     if on_call_app and active_frac > 0:
         guess, why = "on_call", "call app frontmost"
     elif utt >= 2:
-        guess, why = "talking_to_boppy", f"{utt} voice turns"
+        guess, why = "talking_to_assistant", f"{utt} voice turns"
     elif at_desk:
         work = top_app in cfg["work_apps"] and not distracted
         if not work and top_app and not distracted and top_app not in ("Safari", "Google Chrome", "Firefox", "Arc", "Music", "TV"):
@@ -607,7 +616,7 @@ def maybe_nudge(db, cfg, ts, blk, guess, dry_run=None):
         return {"sent": False, "reason": "cooldown"}
     task = re.sub(r"\s*[(/:].*$", "", blk["task"])[:70]
     mins = max(0, int((blk["planned_end"] - ts) / 60))
-    text = f"Hey John, quick check. This block is for {task}, with about {mins} minutes left. Want to get back to it, or should I move it?"
+    text = f"Hey, quick check. This block is for {task}, with about {mins} minutes left. Want to get back to it, or should I move it?"
     spoke, err = False, None
     if not dry:
         try:
@@ -676,6 +685,9 @@ def run():
         try:
             cfg = load_config()
             screen_tick(cfg)
+            if cfg.get("screenrec"):
+                from vision_lab import screenrec
+                screenrec.ensure_running(cfg)
             if t >= next_sample:
                 sample_once(db, cfg, screen=False)
                 next_sample = t + cfg["sample_every_s"]

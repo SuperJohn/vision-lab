@@ -1,0 +1,352 @@
+{
+ "models": {
+  "yolo11n": {
+   "metrics": [
+    {
+     "label": "Time per frame",
+     "value": "23.8 ms (≈42 fps)",
+     "note": "640 px, MPS, model only; live app shared the GPU, so expect run-to-run swings",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "64 MB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "560 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "6 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "yolo11s": {
+   "metrics": [
+    {
+     "label": "Time per frame",
+     "value": "11.5 ms (≈87 fps)",
+     "note": "640 px, MPS, model only; live app shared the GPU, so expect run-to-run swings",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "125 MB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "636 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "19 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "yolo11s-seg": {
+   "metrics": [
+    {
+     "label": "Time per frame",
+     "value": "13.0 ms (≈77 fps)",
+     "note": "640 px, MPS, model only; live app shared the GPU, so expect run-to-run swings",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "125 MB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "650 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "21 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "yolo11s-pose": {
+   "metrics": [
+    {
+     "label": "Time per frame",
+     "value": "11.7 ms (≈86 fps)",
+     "note": "640 px, MPS, model only; live app shared the GPU, so expect run-to-run swings",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "125 MB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "656 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "20 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "yolov8s-worldv2": {
+   "metrics": [
+    {
+     "label": "Time per frame",
+     "value": "10.5 ms (≈95 fps)",
+     "note": "640 px, MPS, model only; live app shared the GPU, so expect run-to-run swings",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "154 MB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "2,630 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "26 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "sam2.1_b": {
+   "metrics": [
+    {
+     "label": "Outline one click",
+     "value": "117 ms",
+     "note": "960×540 test image, MPS",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "4.79 GB",
+     "note": "Metal driver, after the runs",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "932 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "162 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "siglip": {
+   "metrics": [
+    {
+     "label": "Index one keyframe",
+     "value": "14 ms",
+     "note": "224 px, MPS",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Search query",
+     "value": "8 ms",
+     "note": "embed one phrase",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory",
+     "value": "1.09 GB",
+     "note": "Metal driver",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "585 MB",
+     "note": "whole Python process incl. PyTorch",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "816 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "depth": {
+   "metrics": [],
+   "error": "not installed",
+   "date": "2026-10-22"
+  },
+  "whisper-large-v3-turbo": {
+   "metrics": [
+    {
+     "label": "Speed (real-time factor)",
+     "value": "0.024 (≈41× faster than real time)",
+     "note": "9 s synthetic speech, GPU (MLX), warm",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "First run incl. load",
+     "value": "0.6 s",
+     "note": null,
+     "date": "2026-10-22"
+    },
+    {
+     "label": "GPU memory peak",
+     "value": "2.48 GB",
+     "note": "MLX",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "1,843 MB",
+     "note": "whole Python process",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "1.61 GB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "silero-vad": {
+   "metrics": [
+    {
+     "label": "Time per 32 ms chunk",
+     "value": "0.10 ms",
+     "note": "CPU, ONNX",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "2 MB",
+     "note": null,
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "254 MB",
+     "note": "whole Python process",
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "kokoro": {
+   "metrics": [
+    {
+     "label": "Speed (real-time factor)",
+     "value": "0.13 (≈7.8× faster than real time)",
+     "note": "one 5 s sentence, CPU (ONNX)",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "679 MB",
+     "note": "whole Python process",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "354 MB",
+     "note": "model + voices",
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "ast-audioset": {
+   "metrics": [
+    {
+     "label": "Classify a 2 s clip",
+     "value": "68 ms",
+     "note": "MPS",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "527 MB",
+     "note": "whole Python process",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "346 MB",
+     "note": null,
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "minilm": {
+   "metrics": [
+    {
+     "label": "Embed 64 sentences",
+     "value": "40 ms (0.62 ms each)",
+     "note": "CPU, ONNX",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Peak RAM",
+     "value": "249 MB",
+     "note": "whole Python process",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Size on disk",
+     "value": "90 MB",
+     "note": "ONNX model file",
+     "date": "2026-10-22"
+    }
+   ]
+  },
+  "gemma4:26b": {
+   "metrics": [
+    {
+     "label": "Caption one image",
+     "value": "1.1 s",
+     "note": "960×540 test image, ≤60 tokens, warm",
+     "date": "2026-10-22"
+    },
+    {
+     "label": "Writing speed",
+     "value": "49 tokens/s",
+     "note": "Ollama eval rate",
+     "date": "2026-10-22"
+    }
+   ]
+  }
+ },
+ "date": "2026-10-22",
+ "machine": "Apple M3 Ultra, 256 GB",
+ "note": "Measured by tools/bench_catalog.py on synthetic inputs (drawn test scene, `say` speech, fixed sentences) while the live app was running, so GPU numbers include contention."
+}

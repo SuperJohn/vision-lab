@@ -1,4 +1,4 @@
-"""HOU-146: Privacy mode stops camera, mic and screen captures together.
+"""Privacy mode stops camera, mic and screen captures together.
 
     .venv/bin/python tests/capture_pause.py
 """

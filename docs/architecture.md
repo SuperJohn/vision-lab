@@ -1,4 +1,4 @@
-# Architecture (HOU-87)
+# Architecture
 
 All processing is on-device (Mac Studio, M3 Ultra). Nothing leaves the machine.
 

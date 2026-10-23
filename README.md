@@ -1,15 +1,28 @@
 # Vision Lab
 
-A local, on-device camera understanding lab for Apple Silicon Macs. It runs object detection, segmentation, tracking, pose, depth and a vision-language model on a live webcam stream, all on your own machine. No video leaves the computer.
+Vision Lab turns a Mac into a private, on-device timeline of what your camera sees, what is on your screen and what you say. It runs every model locally on Apple Silicon (detection, tracking, pose, segmentation, a vision-language model, speech-to-text and text-to-speech) and stores everything in a local SQLite database. Nothing is uploaded.
+
+![Live view in Privacy mode](docs/screenshots/live.png)
 
 ## What it does
 
-| Screen | What you can do |
+| Tab | What you can do |
 |---|---|
-| **Live** | Camera feed with toggleable overlays (boxes, masks, pose skeletons, track trails, zones, depth). Turn pipeline stages on and off and watch the per-frame time budget. A local vision model describes the scene every few seconds, and you can ask questions about the current frame. |
-| **Zones & rules** | Draw polygon zones and crossing lines on a paused frame, or click any object to outline it with SAM 2.1. Build rules such as *"a person stays in Desk zone for more than 45 min while sitting → notify"* or *"someone crosses Doorway line → ask the vision model to describe them"*. |
-| **Timeline** | Search saved keyframes with plain text (SigLIP embeddings), see per-class activity across the day, and have a local LLM summarize or answer questions about the event log. |
-| **Model lab** | Memory use across the app and Ollama, an A/B comparison of two detectors on the same frame (e.g. YOLO11n vs. open-vocabulary YOLO-World), and one-click download/benchmark of each model. |
+| **Video** | Live camera feed with overlays you can switch on and off (boxes, masks, pose skeletons, track trails, zones, depth). Each pipeline stage shows what it costs per frame. A local vision model describes the scene every few seconds, and you can ask questions about the current frame. |
+| **Voice** | Talk to a local model out loud: Silero VAD for turn-taking and barge-in, mlx-whisper for speech-to-text, an Ollama model for the reply, Kokoro for the voice. In recording mode, what you say is transcribed into a searchable voice log. |
+| **Screens** | Periodic screenshots, captioned by a local vision model. Screen captures are tagged sensitive and are never exported. |
+| **Zones & rules** | Draw polygon zones and crossing lines, or click an object to outline it with SAM 2.1. Build rules such as *"a person comes into view → save the frame and ask the vision model to describe them"*. |
+| **Timeline** | Search saved keyframes with plain text (SigLIP embeddings), see activity across the day by type, and have a local LLM summarize or answer questions about the log. |
+| **Model lab** | A catalog of every model the app uses: whether it is in use, on demand or not in use, whether it is loaded right now, what it does in plain words, and benchmarks labeled as *measured here* or *published* (with a source link). Also unified-memory use and an A/B detector comparison on the same frame. |
+
+![Model lab catalog](docs/screenshots/model-lab.png)
+
+## Privacy
+
+- **One switch.** The header toggle shows green **RECORDING** or red **PRIVATE**. Private stops the camera (the device is released, so the light goes off), screen capture and the mic together, while the server keeps running. The button only shows state the server has confirmed.
+- **Local only.** The server listens on `127.0.0.1`. Models run on the Mac through PyTorch (MPS), MLX and Ollama.
+- **Redaction.** Window titles and text that look like messaging, banking or other personal content are skipped or masked before they are stored. You can add your own terms in untracked local files (`data/redaction_terms.txt`, `data/redaction_title_terms.txt`).
+- **Your data stays out of git.** `data/` (database, keyframes, logs) and `weights/` are git-ignored. Mic audio, if you keep it, goes to `VLAB_AUDIO_DIR` outside the repo.
 
 ## How it works
 
@@ -17,46 +30,29 @@ A local, on-device camera understanding lab for Apple Silicon Macs. It runs obje
 Camera ─► fast loop (every frame): YOLO11 detect/segment + ByteTrack + YOLO11-pose ─► zones & rules ─► SQLite event log
                                                      │ rule fires / every N seconds
                                                      ▼
-                         slow loop: Ollama vision model (gemma3, qwen3-vl, …) describes or answers ─► event log
-                                                     │
+                         slow loop: Ollama vision model describes or answers ─► event log
+Screen ─► screenshots / screen video ─► local captions (sensitive, never exported)
+Mic    ─► VAD ─► mlx-whisper ─► voice log (junk/hallucination filter) ─► event log
                        keyframes ─► SigLIP embeddings (text search)   ·   LLM summarizes the day's log
 ```
 
-The fast loop runs at about 30 fps on an M3 Ultra (detect ≈ 5 ms, segment ≈ 5 ms, pose ≈ 7 ms at 960 px input). It drops for a moment while the vision-language model uses the GPU. Models get a 960 px copy of each frame, and all outputs are normalised coordinates.
+On an M3 Ultra the fast loop runs at about 30 fps at 960 px input. More detail: [docs/architecture.md](docs/architecture.md) and [docs/event-model.md](docs/event-model.md).
 
-## Metrics
-
-Architecture diagram: [docs/architecture.md](docs/architecture.md). Event model: [docs/event-model.md](docs/event-model.md).
-
-**Fast loop** (M3 Ultra, 960 px input; source: Model lab benchmark in this repo): about 30 fps; detect ≈ 5 ms, segment ≈ 5 ms, pose ≈ 7 ms per frame.
-
-**Local LLM bake-off** (source: `~/bakeoff` results, 2026-10-14; 20 home keyframes for vision, 10 voice prompts, 9 tool-calling tasks; medians):
-
-| Model | Vision caption | Valid JSON | Voice TTFT | Voice tok/s | Voice reply total | Agent tasks |
-|---|---|---|---|---|---|---|
-| **gemma4:26b** (slow loop) | **0.95 s** | 20/20 | 0.09 s | 91 | 0.42 s | 9/9 (0.83 s) |
-| qwen3.6:35b | 1.15 s | 20/20 | 0.07 s | 94 | 0.57 s | 9/9 (1.45 s) |
-| qwen3.8:27b | 3.30 s | 20/20 | 0.24 s | 41 | 1.13 s | 9/9 (low 6.4 s / high 5.2 s) |
-| gemma3:27b | 4.11 s | 20/20 | 0.42 s | 25 | 2.49 s | 0/9 (no tool support) |
-| gpt-oss:120b | n/a (no vision) | – | 0.60 s | 67 | 1.14 s | 9/9 (low 1.9 s / high 3.8 s) |
-
-gemma4:26b is about 4× faster than gemma3:27b on captions with the same JSON validity, which is why it runs the slow loop.
-
-**Data quality** (source: `python -m vision_lab.dq --db data/vlab.db`, 2026-10-14, aggregates only; details in [docs/dq.md](docs/dq.md)):
-
-| Check | Before (all detections) | After (conf ≥ 0.5) |
-|---|---|---|
-| Couch false-positive rate (on screen / on bed / low conf) | 37.9% of 2,012 | 1.4% of 1,300 |
-| Frames with duplicate person boxes (IoU ≥ 0.7) | 0.09% of 1,075 | 0% of 901 |
-| Person tracks with an overlapping duplicate candidate (≤ 2 s) | 13.4% of 3,608 | – |
-
-**Data volume** (2026-10-14): 95.6k events across 5 modalities, 33k presence spans, 6.2k embedded keyframes, 2,972 slow-loop annotations, 128 voice turns (all linked to a keyframe).
+| Model | Job |
+|---|---|
+| YOLO11 (detect, seg, pose) + ByteTrack | People and objects, outlines, posture, track IDs |
+| YOLO-World | Open-vocabulary detection ("find the things you type") |
+| SAM 2.1 | Click-to-outline zones |
+| Depth Anything V2 | Optional depth overlay |
+| SigLIP | Text search over saved keyframes |
+| Ollama vision model (e.g. `gemma4:26b`) | Scene captions, questions, summaries |
+| mlx-whisper large-v3-turbo · Silero VAD · Kokoro | Speech-to-text, turn-taking, text-to-speech |
 
 ## Requirements
 
-- macOS on Apple Silicon (uses PyTorch's MPS backend; falls back to CPU elsewhere)
-- [uv](https://github.com/astral-sh/uv), `ffmpeg` (used to list camera names)
-- [Ollama](https://ollama.com) with a vision model, e.g. `ollama pull gemma3:27b` (or a smaller one like `gemma3:12b` / `qwen3-vl:8b`)
+- macOS on Apple Silicon
+- [uv](https://github.com/astral-sh/uv) and `ffmpeg`
+- [Ollama](https://ollama.com) with a vision model, e.g. `ollama pull gemma4:26b` (a smaller one such as `qwen3-vl:8b` works too)
 
 ## Run
 
@@ -64,58 +60,54 @@ gemma4:26b is about 4× faster than gemma3:27b on captions with the same JSON va
 ./run.sh
 ```
 
-Or double-click **`Start Vision Lab.command`** in Finder: it starts the server and opens the page (if it's already running, it just opens the page).
+Or double-click **`Start Vision Lab.command`** in Finder. Then open <http://localhost:8765>. The first run creates `.venv`, installs dependencies and downloads the YOLO and Kokoro weights. SAM, Depth Anything and SigLIP download the first time you use them. macOS asks for camera, mic and screen-recording permission for the app that launched the server.
 
-Then open <http://localhost:8765>. In the header, the **Privacy mode** toggle (green RECORDING / red PRIVATE) stops the camera, screen captures and mic together while the server keeps running. **Quit server** shuts it down; start it again with the launcher. The first run creates `.venv`, installs dependencies, and downloads YOLO weights (about 20 MB each). SAM, Depth Anything and SigLIP download the first time you use them.
+Optional: `macapp/build.sh` builds a small `Vision Lab.app` that owns the server processes, so macOS permissions stick to one stable app. Set `VLAB_REPO` if your checkout isn't at `~/vision-lab`.
 
-macOS asks for camera permission the first time, for the app that launched the script (Terminal, iTerm, etc.). Restart after approving.
+Useful settings:
 
-To test without a camera, point it at a video file (it loops):
+| Variable | Effect |
+|---|---|
+| `VLAB_SOURCE=/path/to/video.mp4` | Use a looping video file instead of the camera |
+| `VLAB_NO_CAMERA=1`, `VLAB_NO_MIC=1`, `VLAB_NO_SCREEN=1` | Turn a capture source off |
+| `VLAB_DB=/tmp/test.db` | Use a separate database (e.g. for tests) |
+| `VLAB_RECORDING_MODE=0` | Turn off recording mode (camera video, mic and screen together) |
+| `VLAB_AUDIO_DIR`, `VLAB_AUDIO_RETAIN=0` | Where kept mic audio goes, or don't keep it |
+
+Find a moment by what you said, and optionally export the clip:
 
 ```bash
-VLAB_SOURCE=/path/to/video.mp4 ./run.sh
+bin/vlab find "the part where I set up the zones" --days 7
 ```
+
+## Tests
+
+The tests use synthetic data and temporary databases. Some run against a test server started with `VLAB_NO_CAMERA=1 VLAB_DB=/tmp/x.db`, for example `.venv/bin/python tests/model_catalog.py`.
+
+Before publishing, `scripts/publish_gate.sh` runs gitleaks and a PII scan (emails, phone numbers, home paths and your local term lists).
 
 ## Layout
 
 ```
 vision_lab/
-  engine.py   camera thread, model pipeline, tracker state, zones/lines/rules, VLM + embedding workers
-  server.py   FastAPI: WebSocket stream (JSON metadata + JPEG per frame) and REST API
-  llm.py      Ollama client and SigLIP embedder
-  store.py    SQLite: events, presence spans, keyframes, settings/zones/rules
-  static/     single-page UI (vanilla JS + canvas)
-data/         created at runtime: vlab.db, keyframes/ (git-ignored)
-weights/      downloaded model weights (git-ignored)
+  engine.py      camera thread, model pipeline, tracker, zones/lines/rules, VLM + embedding workers
+  server.py      FastAPI: WebSocket stream and REST API
+  recording.py   recording mode: camera video, mic and screen on one switch
+  screenrec.py   scheduled screen video        voicetx.py / voicelog.py   mic transcription and voice log
+  catalog.py     Model lab catalog              redaction_pack.py         privacy filters
+  store.py       SQLite schema and queries      static/                   single-page UI
+bin/vlab         command-line search over the voice log
+data/            created at runtime (git-ignored)
+weights/         downloaded model weights (git-ignored)
 ```
 
 ## Notes and limits
 
-- Pose and posture (standing / sitting / lying) come from YOLO11-pose keypoints with a simple angle heuristic. When legs are hidden (e.g. behind a desk) posture stays "unknown".
-- Track IDs come from ByteTrack and can change when an object is occluded for a while. Rule cooldowns are per rule to avoid repeat alerts.
-- SAM click-to-segment outlines an object on the paused frame so you can save it as a zone. It does not yet follow that object through the video.
-- Recordings are saved as H.264 MP4 to `~/Downloads` (set `VLAB_RECORDINGS=/some/folder` to change it). Events and keyframes stay in `data/`. Everything stays on your machine. Be mindful of other people when recording.
+- Posture (standing, sitting, lying) comes from pose keypoints with a simple angle rule, so it reads "unknown" when legs are hidden.
+- Track IDs can change after a long occlusion.
+- Be mindful of other people when recording.
 
-## Voice (step 1 of Sense Lab)
-Voice tab: talk to gemma3:27b through the browser mic, all on this Mac.
-Silero VAD (turns + barge-in) → mlx-whisper large-v3-turbo → Ollama gemma3:27b (streamed) → Kokoro TTS (streamed per sentence).
-While a voice turn is live the vision caption worker pauses so voice gets Ollama first.
-Turn metrics are shown in the tab, served at `/api/voice/state`, and appended to `data/voice_events.jsonl`
-(`kind: voice_turn | voice_interrupt`) for loading into vlab.db in step 2. "Grok Voice (cloud)" is a disabled stub.
-Tests (against a running server): `.venv/bin/python tests/voice_e2e.py 8765` and `tests/voice_bargein.py 8765`.
-
-## Multimodal record (step 2)
-vlab.db now holds vision, audio and voice together (migrated in place on first start; older rows count as vision).
-- `events.modality` = vision | audio | voice | system, plus `written_at` (write lag = written_at − ts), `data` (JSON), `source_key` (dedupe).
-- `utterances`: one row per user/assistant utterance — turn_id, role, text, ts_start/ts_end, voice, model,
-  latencies (JSON), interrupted, error, nearest keyframe_id (±10 min) and a snapshot of tracked objects/zones/caption.
-- Ambient sounds (dog, doorbell, knock, speech, alarm, music, water, loud noise) are classified with
-  AST/AudioSet while the Voice mic is open (`ambient` setting) and stored as `modality=audio, kind=sound`.
-- The voice brain gets a compact camera summary (now in view, time in view, last seen, recent notable events,
-  half-hourly captions, or the log around a time you ask about). Preview it: `/api/context?q=...`.
-- APIs: `/api/timeline/events` (merged; since/until/range/modality/q), `/api/search/all?q=`,
-  `/api/export?format=jsonl|parquet`. `data/voice_events.jsonl` is imported idempotently at startup.
-- Test: `.venv/bin/python tests/multimodal_e2e.py 8765`. Test servers: `VLAB_NO_CAMERA=1 VLAB_DB=/tmp/x.db VLAB_VOICE_LOG=/tmp/x.jsonl`.
+![Model lab on a phone](docs/screenshots/model-lab-phone.png) ![Zones and rules](docs/screenshots/zones.png)
 
 ## License
 

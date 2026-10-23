@@ -1,4 +1,4 @@
-"""HOU-146: boot ID + no-cache UI serving so open pages pick up server restarts.
+"""boot ID + no-cache UI serving so open pages pick up server restarts.
 
 BOOT_ID changes every server start; the page remembers the first one it sees and reloads when it
 changes. UI files are served with no-cache and index.html version-busts its asset URLs with BOOT_ID."""

@@ -8,4 +8,6 @@ K=weights/kokoro; U=https://github.com/thewh1teagle/kokoro-onnx/releases/downloa
 if [ ! -f $K/voices-v1.0.bin ]; then
   mkdir -p $K && curl -sSL -o $K/kokoro-v1.0.onnx $U/kokoro-v1.0.onnx && curl -sSL -o $K/voices-v1.0.bin $U/voices-v1.0.bin
 fi
+# recording mode: while RECORDING (privacy off), mic, camera video and screen are captured together.
+export VLAB_RECORDING_MODE="${VLAB_RECORDING_MODE:-1}"
 exec .venv/bin/python -m uvicorn vision_lab.server:app --host 127.0.0.1 --port "${PORT:-8765}"

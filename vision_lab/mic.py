@@ -3,7 +3,11 @@
 Audio is captured in the browser (getUserMedia) and streamed to /ws/voice; the server also
 enumerates macOS input devices with ffmpeg/avfoundation so the picker and a level test work
 without a browser. When the mic is off the server drops all incoming audio, so no voice turns
-and no ambient sound events (barks, knocks) are produced."""
+and no ambient sound events (barks, knocks) are produced.
+
+Privacy mode locks the mic: while it is on, the mic cannot be turned on or tested
+(409) and enabled() reports False even if the stored flag says otherwise."""
+import os
 import re
 import subprocess
 
@@ -12,6 +16,24 @@ from fastapi import APIRouter, Body, HTTPException
 
 router = APIRouter()
 STORE = {"store": None}
+# Set by the server: privacy() -> True while Privacy mode is on.
+PRIVACY = {"on": None}
+PRIVACY_MSG = "Privacy mode is on, so the mic stays off. Turn off Privacy mode (the PRIVATE button) first."
+
+
+def privacy_on():
+    f = PRIVACY["on"]
+    if f is None:
+        return False
+    try:
+        return bool(f())
+    except Exception:
+        return True   # fail closed: unknown privacy state locks the mic
+
+
+def _refuse_if_private():
+    if privacy_on():
+        raise HTTPException(409, PRIVACY_MSG)
 
 
 def list_devices():
@@ -57,7 +79,9 @@ def pick_default(devs):
 
 def state():
     st = STORE["store"]
-    return {"enabled": bool(st.get_config("mic_enabled", True)), "device": st.get_config("mic_device", None)}
+    private = privacy_on()
+    return {"enabled": bool(st.get_config("mic_enabled", True)) and not private,
+            "device": st.get_config("mic_device", None), "privacy": private}
 
 
 def enabled():
@@ -83,9 +107,17 @@ def get_mic():
             "devices": devs}
 
 
+@router.get("/api/mic/state")
+def get_mic_state():
+    """Cheap state read (no device scan) for UI refreshes, e.g. after Privacy mode changes."""
+    return state()
+
+
 @router.post("/api/mic")
 def set_mic(patch: dict = Body(...)):
     st = STORE["store"]
+    if patch.get("enabled"):
+        _refuse_if_private()
     if "enabled" in patch:
         st.set_config("mic_enabled", bool(patch["enabled"]))
     if "device" in patch:
@@ -98,6 +130,8 @@ def set_mic(patch: dict = Body(...)):
 
 @router.post("/api/mic/toggle")
 def toggle_mic():
+    if not enabled():
+        _refuse_if_private()
     STORE["store"].set_config("mic_enabled", not enabled())
     return state()
 
@@ -105,6 +139,9 @@ def toggle_mic():
 @router.post("/api/mic/test")
 def test_mic(seconds: float = 2.0):
     """Record a short clip from the selected device server-side and report its level."""
+    if os.environ.get("VLAB_NO_MIC"):   # preview/test servers never touch the mic
+        raise HTTPException(409, "This server runs with VLAB_NO_MIC=1, so it never records from the mic.")
+    _refuse_if_private()
     dev = state()["device"]
     idx = "default" if dev is None else next((d["index"] for d in list_devices() if d["name"] == dev), None)
     if idx is None:

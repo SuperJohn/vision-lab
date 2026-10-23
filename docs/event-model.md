@@ -1,4 +1,4 @@
-# Vision Lab event model (HOU-84)
+# Vision Lab event model
 
 Everything Vision Lab and its workers observe lands in one SQLite file, `data/vlab.db` (git-ignored, local only).
 This page documents the tables, keys and links between them. A synthetic copy with the same schema lives at
@@ -50,7 +50,7 @@ Indexes: `events_ts(ts)`, `events_modality_ts(modality, ts)`, unique `events_sou
 ### `batch_annotations` — slow loop output
 `id` PK, `source_type` (`keyframe` | `screen`), `source_path`, `keyframe_id` → `keyframes.id` (keyframes only), `capture_ts`,
 `processed_ts`, `created_at`, `model`, `caption`, `label`, `detections` (JSON `[{cls, conf, box:[x1,y1,x2,y2] normalised}]`),
-`gemma_ms`, `detect_ms`, `status`, `error`, `sensitive`, `exportable` (HOU-68: screens are `sensitive=1, exportable=0`).
+`gemma_ms`, `detect_ms`, `status`, `error`, `sensitive`, `exportable` (screens are `sensitive=1, exportable=0`).
 Unique `(source_type, source_path)`; index `batch_ann_capture(source_type, capture_ts)`.
 
 ### `plan_blocks` / `plan_changes` — planloop

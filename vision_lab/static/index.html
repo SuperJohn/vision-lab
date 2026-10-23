@@ -3,41 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vision Lab</title>
+<title>Vision Lab · houghtonlabs</title>
+<meta name="theme-color" content="#FAFAF7">
+<link rel="icon" href="/static/brand/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <div class="brand">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F5A524" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/></svg>
-    <span>Vision Lab</span>
+    <img class="brand-mark" src="/static/brand/hl-flask-outline.svg" alt="" width="30" height="33">
+    <span class="brand-name">houghton<span class="brand-labs">labs</span></span>
+    <span class="brand-sep" aria-hidden="true"></span>
+    <h1 class="app-name">Vision Lab</h1>
   </div>
   <nav aria-label="Sections" class="tabs">
-    <button type="button" data-view="live" class="tab active">Live</button>
+    <button type="button" data-view="live" class="tab active">Video</button>
+    <button type="button" data-view="voice" class="tab">Voice</button>
+    <button type="button" data-view="screens" class="tab">Screens</button>
     <button type="button" data-view="zones" class="tab">Zones &amp; rules</button>
     <button type="button" data-view="timeline" class="tab">Timeline</button>
     <button type="button" data-view="models" class="tab">Model lab</button>
-    <button type="button" data-view="voice" class="tab">Voice</button>
-    <button type="button" data-view="screens" class="tab">Screens</button>
   </nav>
   <div class="grow"></div>
-  <label class="muted inline">Mic <select id="mic-device" title="Input device for voice and room sounds"></select></label>
-  <button type="button" class="btn" id="mic-toggle" title="Turn microphone listening on or off"><span class="dot" id="mic-dot"></span><span id="mic-label">Mic …</span></button>
-  <label class="muted inline">Camera <select id="camera"></select></label>
+  <button type="button" class="btn" id="mic-toggle" title="Shows whether the microphone is on. Click to switch it. Mic on allows voice capture in recording mode; nothing is recorded until recording mode is on."><span class="dot" id="mic-dot"></span><span id="mic-label">Mic …</span></button>
   <button type="button" class="btn privacy pending" id="power" aria-pressed="false" disabled title="Privacy mode: PRIVATE stops the camera, screen captures and mic together; RECORDING runs them. Click to toggle. The server keeps running."><span class="privacy-icon" aria-hidden="true"><svg class="ico-private" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg><span class="rec-dot"></span></span><span id="privacy-label">SWITCHING…</span></button>
   <button type="button" class="btn" id="quit" title="Shut down the Vision Lab server. Start it again with Start Vision Lab.command.">Quit server</button>
   <div class="pill mono"><span class="dot ok"></span>On-device only · no network</div>
 </header>
+<div id="main" tabindex="-1"></div>
 
 <div id="banner" class="banner" hidden></div>
 
-<!-- ============ LIVE ============ -->
+<!-- ============ VIDEO (view id "live") ============ -->
 <section id="view-live" class="view">
   <aside class="col-left">
     <div class="eyebrow">Pipeline</div>
     <div class="card list" id="stages"></div>
     <div class="card pad stack">
       <div class="eyebrow">Settings</div>
+      <label class="field">Camera <select id="camera" title="Which camera Vision Lab watches"></select></label>
       <label class="field">Detector
         <select id="detector">
           <option value="yolo11n">YOLO11n (fastest, 80 classes)</option>
@@ -65,12 +72,10 @@
       <span class="muted">Overlays</span>
       <span id="layers"></span>
       <div class="grow"></div>
-      <button type="button" class="btn" id="snapshot">Snapshot</button>
-      <button type="button" class="btn primary" id="record" title="Save the raw camera video (no overlays) as an MP4 in Downloads. Detection and events run whether or not you record.">● Record video</button>
     </div>
     <figure class="stage">
       <canvas id="live" width="1280" height="720" aria-label="Live camera with overlays"></canvas>
-      <div class="hud left mono"><span class="live-badge">● LIVE</span><span class="rec-badge" id="hud-rec" hidden>● REC</span><span class="hud-chip" id="hud-res">—</span></div>
+      <div class="hud left mono"><span class="live-badge">● LIVE</span><span class="hud-chip" id="hud-res">—</span></div>
       <div class="hud right mono hud-chip" id="hud-pose" hidden></div>
     </figure>
     <section class="card pad stack" aria-label="Frame budget">
@@ -148,7 +153,7 @@
   <form role="search" class="row wrap" id="search-form">
     <label for="q" class="sr-only">Search footage</label>
     <div class="search">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3AFBD" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
       <input id="q" type="text" placeholder="red mug on the desk" autocomplete="off">
     </div>
     <select id="range" aria-label="Time range" class="tall"><option value="today">Today</option><option value="week">Last 7 days</option></select>
@@ -157,10 +162,25 @@
   <div class="muted small" id="search-meta">Search saved keyframes by describing what you're looking for.</div>
   <div class="shots" id="shots"></div>
   <div class="row wrap top">
-    <section class="card pad stack lanes-card" aria-label="Activity by class">
-      <div class="row between wrap"><span class="eyebrow">Activity today</span><button type="button" class="link" id="tl-refresh">Refresh</button></div>
-      <div class="scroll-x"><div id="lanes" class="lanes"></div></div>
-    </section>
+    <div class="stack lanes-card">
+      <div class="row wrap tl-scale" role="toolbar" aria-label="Timeline range">
+        <button type="button" class="btn" id="tl-prev" aria-label="Previous day">◀</button>
+        <input type="date" id="tl-day" aria-label="Day">
+        <button type="button" class="btn" id="tl-next" aria-label="Next day">▶</button>
+        <button type="button" class="btn" id="tl-today">Today</button>
+        <label class="inline small muted">Zoom <select id="tl-zoom"><option value="1">Whole day</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="24">1 h per screen</option></select></label>
+        <div class="grow"></div>
+        <button type="button" class="link" id="tl-refresh">Refresh</button>
+      </div>
+      <section class="card pad stack" aria-label="Captures">
+        <div class="row between wrap"><span class="eyebrow">Captures</span><span class="muted tiny" id="cap-meta"></span></div>
+        <div class="scroll-x tl-scroll"><div id="cap-lanes" class="lanes"></div></div>
+      </section>
+      <section class="card pad stack" aria-label="Object activity">
+        <div class="row between wrap"><span class="eyebrow">Object activity</span><span class="muted tiny" id="tl-day-label"></span></div>
+        <div class="scroll-x tl-scroll"><div id="lanes" class="lanes"></div></div>
+      </section>
+    </div>
     <section class="card pad stack summary-card">
       <div class="row between"><span class="eyebrow">Today, summarized</span><button type="button" class="btn" id="summarize">Summarize</button></div>
       <p class="scene" id="summary-text"><span class="muted">Press Summarize to have the local language model write up today's event log.</span></p>
@@ -196,12 +216,15 @@
     <div class="ab" id="ab"></div>
   </section>
   <section class="card" aria-label="Model catalog">
-    <div class="row between wrap pad-h">
-      <span class="eyebrow">Model catalog</span>
-      <span class="muted tiny">Benchmark runs on the current camera frame and briefly pauses the live view.</span>
+    <div class="pad-h stack catalog-head">
+      <div class="row between wrap">
+        <span><span class="eyebrow">Model catalog</span> <span class="muted small" id="catalog-summary"></span></span>
+        <span class="muted tiny">Benchmark runs on the current camera frame and briefly pauses the live view.</span>
+      </div>
+      <div class="muted small">“In use” comes from the live settings: <b>In use</b> runs all the time, <b>On demand</b> runs when you use that feature. Hover a benchmark to see whether it was measured here (this Mac, synthetic test inputs) or published (with its source).</div>
     </div>
     <div class="scroll-x"><table class="catalog" id="catalog">
-      <thead><tr><th>Task</th><th>Model</th><th>What you get</th><th>Runs on</th><th>Speed</th><th></th></tr></thead>
+      <thead><tr><th scope="col">Model</th><th scope="col">In use</th><th scope="col">What it does for you</th><th scope="col">Benchmarks</th><th scope="col">Runs on</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
       <tbody></tbody>
     </table></div>
   </section>
@@ -210,34 +233,28 @@
 <div class="toast" id="toast" role="status" hidden></div>
 <!-- ============ VOICE ============ -->
 <section id="view-voice" class="view column" hidden>
-  <section class="card pad stack" aria-label="Voice chat">
+  <section class="card pad stack" aria-label="Voice log">
     <div class="row wrap between">
-      <div class="row wrap">
-        <button type="button" class="btn primary tall" id="v-mic">Start talking</button>
-        <button type="button" class="btn" id="v-stop" title="Stop the reply that is playing">Stop reply</button>
-        <span class="pill mono" id="v-state"><span class="dot"></span>off</span>
+      <div class="stack" style="gap:4px">
+        <div class="eyebrow">Voice log</div>
+        <div class="muted small">Everything Vision Lab heard, as text, newest first. Voice is captured in recording mode, the same way screens are, and nothing is captured while Privacy mode is on.</div>
       </div>
-      <div class="row wrap small">
-        <label class="inline">Voice
-          <select id="v-engine">
-            <option value="kokoro">Kokoro · local</option>
-            <option value="grok" disabled>Grok Voice · cloud (not set up)</option>
-          </select></label>
-        <label class="inline">Speaker <select id="v-voice">
-          <option>af_heart</option><option>af_bella</option><option>af_nicole</option><option>am_michael</option><option>am_adam</option><option>bf_emma</option><option>bm_george</option>
-        </select></label>
-      </div>
+      <label class="field vl-mic">Microphone <select id="mic-device" title="Input device for voice capture. Changing it never turns the mic on."></select></label>
     </div>
-    <div class="muted small">Everything runs on this Mac: Silero VAD → Whisper large-v3-turbo (MLX) → gemma4:26b (Ollama) → Kokoro. Talk over a reply to interrupt it. Use headphones or the Studio Display speakers with echo cancellation.</div>
-    <div class="mono small" id="v-partial" aria-live="polite"></div>
-    <div id="v-log" class="stack" style="max-height:46vh;overflow:auto"></div>
-    <form id="v-form" class="row"><input type="text" id="v-text" class="grow" placeholder="Or type a message and hear the reply"><button class="btn">Send</button></form>
-  </section>
-  <section class="card pad stack" aria-label="Voice metrics">
-    <div class="eyebrow">Last turn · milliseconds after you stop talking</div>
-    <div class="row wrap mono" id="v-metrics"></div>
-    <div class="eyebrow">Recent turns</div>
-    <div class="scroll-x"><table class="catalog mono small" id="v-turns"><thead><tr><th>Time</th><th>You said</th><th>Transcript</th><th>First token</th><th>First audio</th><th>Total</th><th>Interrupted</th></tr></thead><tbody></tbody></table></div>
+    <div class="row wrap" role="toolbar" aria-label="Voice log controls">
+      <button type="button" class="btn" id="vl-expand">Expand all</button>
+      <button type="button" class="btn" id="vl-collapse">Collapse all</button>
+      <label class="inline small"><input type="checkbox" id="vl-replies"> Show assistant replies</label>
+      <div class="grow"></div>
+      <span class="muted small mono" id="vl-summary"></span>
+      <button type="button" class="btn" id="vl-refresh">Refresh</button>
+    </div>
+    <div id="vl-days" class="stack" aria-live="polite"></div>
+    <div class="vl-empty" id="vl-empty" hidden>
+      <div class="vl-empty-title">No voice captured yet</div>
+      <div class="muted small">Voice is captured in recording mode, which records screen, voice and camera together with one switch. What was said is saved here as text with timestamps; the audio is kept on this Mac (~/Datasets/vision-lab-audio) so sections can be found and replayed later; turn the Mic off to stop capturing voice. Nothing is captured while Privacy mode is on.</div>
+    </div>
+    <div class="row"><button type="button" class="btn" id="vl-more" hidden>Load older days</button></div>
   </section>
 </section>
 
@@ -253,8 +270,9 @@
   </section>
 </section>
 
+<script src="/static/timefmt.js"></script>
 <script src="/static/app.js"></script>
-<script src="/static/voice.js"></script>
+<script src="/static/voicelog.js"></script>
 <script src="/static/mic.js"></script>
 </body>
 </html>

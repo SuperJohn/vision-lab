@@ -1,0 +1,5 @@
+# model name "whisper-large-v3-turbo" matches generic-api-key (false positive)
+tools/bench_catalog.py:generic-api-key:133
+vision_lab/catalog.py:generic-api-key:92
+vision_lab/catalog.py:generic-api-key:203
+vision_lab/server.py:generic-api-key:422

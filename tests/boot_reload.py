@@ -1,4 +1,4 @@
-"""HOU-146: boot ID, no-cache UI headers, version-busted assets, and frontend auto-reload/error-banner wiring.
+"""boot ID, no-cache UI headers, version-busted assets, and frontend auto-reload/error-banner wiring.
 
     .venv/bin/python tests/boot_reload.py
 """

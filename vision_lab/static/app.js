@@ -1,7 +1,7 @@
 // Vision Lab client: live stream rendering plus the zones, timeline and model screens.
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmtTime = (ts) => new Date(ts * 1000).toLocaleTimeString([], { hour12: false });
+const fmtTime = (ts) => VLTime.clock(ts);   // shared 12-hour formatter (timefmt.js)
 const ZONE_COLORS = ['#F5A524', '#5CC8FF', '#9BE15D', '#FF8CC0', '#C4AEFF', '#FFD166'];
 const SKELETON = [[5, 6], [5, 7], [7, 9], [6, 8], [8, 10], [5, 11], [6, 12], [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [0, 1], [0, 2], [1, 3], [2, 4]];
 
@@ -23,7 +23,7 @@ async function api(path, opts = {}) {
 let state = { settings: null, zones: [], rules: [], classes: [], vlms: [], llms: [], cameras: [] };
 let meta = null;
 
-// HOU-146: reload the page when the server restarts (boot ID changes), so it never runs stale code.
+// reload the page when the server restarts (boot ID changes), so it never runs stale code.
 let bootId = null;
 function checkBoot(id) {
   if (!id) return;
@@ -39,6 +39,7 @@ function show(view) {
   if (view === 'timeline') loadTimeline();
   if (view === 'models') loadModels();
   if (view === 'screens') loadScreens();
+  if (view === 'voice' && window.vlabLoadVoiceLog) window.vlabLoadVoiceLog();
 }
 document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
 document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => show(b.dataset.goto)));
@@ -192,9 +193,9 @@ function onMeta(m) {
   showBanner(m.error);
   setPrivacy(serverPrivacy(m));
   if (m.paused) {
-    lctx.fillStyle = '#0D1117';
+    lctx.fillStyle = '#0B1220';
     lctx.fillRect(0, 0, live.width, live.height);
-    lctx.fillStyle = '#A3AFBD';
+    lctx.fillStyle = '#94A3B8';
     lctx.font = `500 ${Math.round(live.width / 40)}px ${getComputedStyle(document.body).getPropertyValue('--sans')}`;
     lctx.textAlign = 'center';
     lctx.fillText('PRIVATE: camera, screen and mic are stopped. Click PRIVATE to start recording again.', live.width / 2, live.height / 2);
@@ -208,20 +209,6 @@ function onMeta(m) {
   const people = (m.objects || []).filter((o) => o.cls === 'person' && o.posture && o.posture !== 'unknown');
   $('#hud-pose').hidden = !people.length;
   $('#hud-pose').textContent = 'Pose: ' + people.map((p) => `#${p.id} ${p.posture}`).join(', ');
-  const rec = $('#record');
-  if (m.recording) {
-    const secs = Math.max(0, Math.floor(Date.now() / 1000 - (m.recording_since || Date.now() / 1000)));
-    const clock = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
-    rec.textContent = `■ Stop recording · ${clock}`;
-    rec.setAttribute('aria-label', `Stop recording (${clock} recorded)`);
-    $('#hud-rec').textContent = `● REC ${clock}`;
-  } else {
-    rec.textContent = '● Record video';
-    rec.removeAttribute('aria-label');
-  }
-  rec.classList.toggle('recording', !!m.recording);
-  rec.classList.toggle('primary', !m.recording);
-  $('#hud-rec').hidden = !m.recording;
   if (m.events_rev !== lastEventsRev) {
     lastEventsRev = m.events_rev;
     loadEvents();
@@ -248,7 +235,7 @@ function renderCounts(counts) {
     : '<span class="muted">Nothing detected</span>';
 }
 
-const BUDGET_COLORS = { detect: '#F5A524', track: '#F5F0E0', segment: '#5CC8FF', pose: '#C4AEFF', depth: '#FF8CC0', encode: '#8892A0' };
+const BUDGET_COLORS = { detect: '#0D9488', track: '#99F6E4', segment: '#0E2A4F', pose: '#2DD4BF', depth: '#F59E0B', encode: '#94A3B8' };
 function renderBudget(t) {
   const total = Object.values(t).reduce((a, b) => a + b, 0);
   const budget = 1000 / 30;
@@ -441,16 +428,10 @@ $('#ask-form').addEventListener('submit', async (e) => {
   } catch (err) { out.textContent = err.message; }
 });
 
-$('#snapshot').addEventListener('click', () => api('/api/snapshot', { method: 'POST' }).catch((e) => showBanner(e.message)));
-$('#record').addEventListener('click', async () => {
-  try {
-    const r = await api('/api/record', { method: 'POST', body: { on: !meta?.recording } });
-    if (!r.recording && r.path) showToast(`Saved “${r.path.split('/').pop()}” to ${r.path.includes('/Downloads/') ? 'Downloads' : r.path.split('/').slice(0, -1).join('/')}`);
-  } catch (e) { showBanner(e.message); }
-});
+// Snapshot and Record video buttons were removed (feat/voice-log); /api/snapshot and /api/record stay server-side, unused.
 
 const PRIVACY_TIMEOUT_MS = 8000;
-// HOU-146: the button only ever renders server-confirmed state (POST/GET /api/privacy, /api/state, ws meta).
+// the button only ever renders server-confirmed state (POST/GET /api/privacy, /api/state, ws meta).
 let privacyPending = false;
 const serverPrivacy = (m) => !!(m.capture_paused ?? m.privacy_mode ?? m.paused);
 function renderPrivacy(state) {     // state: true (PRIVATE), false (RECORDING) or 'pending'
@@ -463,8 +444,15 @@ function renderPrivacy(state) {     // state: true (PRIVATE), false (RECORDING) 
   b.setAttribute('aria-pressed', String(state === true));
   $('#privacy-label').textContent = pending ? 'SWITCHING…' : state ? 'PRIVATE' : 'RECORDING';
 }
+let lastPrivacy = null;
+function privacyChanged(on) {        // keep the header mic button in step with Privacy mode
+  if (lastPrivacy === on) return;
+  lastPrivacy = on;
+  if (window.vlabRefreshMic) window.vlabRefreshMic();
+}
 function setPrivacy(on) {           // from server truth only; ignored while a request is in flight
   if (!privacyPending) renderPrivacy(!!on);
+  if (!privacyPending) privacyChanged(!!on);
 }
 async function syncPrivacy() {
   // Re-read the server's true state after a failed request.
@@ -472,6 +460,7 @@ async function syncPrivacy() {
     const s = await api('/api/privacy', { signal: AbortSignal.timeout(PRIVACY_TIMEOUT_MS) });
     if (meta) meta.paused = !!s.privacy_mode;
     renderPrivacy(!!s.privacy_mode);
+    privacyChanged(!!s.privacy_mode);
   } catch {
     renderPrivacy('pending');       // unknown: stay neutral until ws meta / reconnect reports the truth
     $('#power').disabled = false;
@@ -490,6 +479,7 @@ $('#power').addEventListener('click', async () => {
     privacyPending = false;
     if (meta) meta.paused = !!r.paused;
     renderPrivacy(!!r.paused);
+    privacyChanged(!!r.paused);
     if (!!r.paused !== turnOn) {
       showBanner(`Privacy mode did not turn ${want}: the server reports ${r.paused ? 'PRIVATE' : 'RECORDING'}.`);
     } else if (turnOn && !r.released) {
@@ -548,7 +538,7 @@ function loadPausedFrame() {
   pausedImg.onload = () => {
     zc.width = pausedImg.naturalWidth;
     zc.height = pausedImg.naturalHeight;
-    $('#paused-at').textContent = `Frame paused at ${new Date().toLocaleTimeString([], { hour12: false })}`;
+    $('#paused-at').textContent = `Frame paused at ${VLTime.clock(Date.now() / 1000)}`;
     drawZoneEditor();
   };
   pausedImg.onerror = () => { $('#paused-at').textContent = 'No camera frame available'; };
@@ -823,25 +813,75 @@ $('#search-form').addEventListener('submit', async (e) => {
     $('#search-meta').textContent = `${r.results.length} matches out of ${r.total} keyframes, ${how}.`;
     $('#shots').innerHTML = r.results.map((s) => `
       <figure class="shot"><a href="/api/keyframe/${s.id}.jpg" target="_blank" rel="noopener"><img src="/api/keyframe/${s.id}.jpg" alt="${esc(s.caption || 'Keyframe at ' + fmtTime(s.ts))}" loading="lazy"></a>
-        <figcaption><div class="row between mono tiny"><span>${new Date(s.ts * 1000).toLocaleString([], { hour12: false, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-        <span style="color:#FF8CC0">${s.score != null ? s.score.toFixed(3) : ''}</span></div>
+        <figcaption><div class="row between mono tiny"><span>${VLTime.dayTime(s.ts)}</span>
+        <span style="color:#0F766E">${s.score != null ? s.score.toFixed(3) : ''}</span></div>
         <div class="muted small">${esc(s.caption || '')}</div></figcaption></figure>`).join('');
   } catch (err) { $('#search-meta').textContent = err.message; }
 });
 
-async function loadTimeline() {
-  const t = await api('/api/timeline?range=today').catch(() => null);
-  if (!t) return;
-  const span = t.end - t.start;
-  const pct = (ts) => ((ts - t.start) / span) * 100;
-  const lanes = t.lanes.map((l) => `
-    <div class="lane"><span><span style="color:${l.color}">●</span> ${esc(l.cls)} <span class="muted tiny">${Math.round(l.seconds / 60)} min</span></span>
-      <div class="track">${l.spans.map(([a, b]) => `<div style="left:${pct(a)}%;width:${Math.max(0.15, pct(b) - pct(a))}%;background:${l.color}" title="${fmtTime(a)}–${fmtTime(b)}"></div>`).join('')}</div></div>`).join('');
-  const rules = `<div class="lane"><span><span style="color:#5CC8FF">●</span> Rule fired</span>
-      <div class="track">${t.rules.map((ts) => `<div style="left:${pct(ts)}%;width:3px;background:#5CC8FF" title="${fmtTime(ts)}"></div>`).join('')}</div></div>`;
-  $('#lanes').innerHTML = (lanes || '<div class="muted small">Nothing has been in view long enough yet today.</div>') + rules +
-    `<div class="lane"><span></span><div class="axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div>`;
+// One shared scale for the Captures and Object activity boxes: same window, same zoom, synced scroll.
+const TL = { start: null, zoom: 1 };
+const dayStart = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() / 1000; };
+const tlEnd = () => { const d = new Date(TL.start * 1000); d.setDate(d.getDate() + 1); return d.getTime() / 1000; };
+const tlPct = (ts) => ((ts - TL.start) / (tlEnd() - TL.start)) * 100;
+function tlAxis() {
+  const step = TL.zoom >= 24 ? 900 : TL.zoom >= 8 ? 1800 : TL.zoom >= 4 ? 3600 : TL.zoom >= 2 ? 3 * 3600 : 6 * 3600;
+  const ticks = [];
+  for (let t = TL.start; t <= tlEnd() + 1; t += step) {
+    const lab = VLTime.tick(t);   // "6 AM", "10:30 AM"; end of day reads 12 AM
+    ticks.push(`<span style="left:${tlPct(t)}%">${lab}</span>`);
+  }
+  return `<div class="lane"><span></span><div class="axis tl-axis">${ticks.join('')}</div></div>`;
 }
+const bar = (a, b, color, title) => `<div style="left:${tlPct(a)}%;width:${Math.max(0.08, tlPct(b) - tlPct(a))}%;background:${color}" title="${title}"></div>`;
+const dur = (s) => (s >= 3600 ? `${(s / 3600).toFixed(1)} h` : `${Math.round(s / 60)} min`);
+const CAP_COLORS = { video: '#0D9488', audio: '#2DD4BF', screen: '#0E2A4F' };
+function renderCaptures(c) {
+  const privacy = c.privacy.map(([a, b]) => bar(a, b, 'repeating-linear-gradient(45deg,#CBD5E1 0 4px,transparent 4px 8px)', `Privacy mode ${fmtTime(a)}–${fmtTime(b)}`)).join('');
+  const rows = c.rows.map((r) => `
+    <div class="lane"><span><span style="color:${CAP_COLORS[r.key]}">●</span> ${esc(r.label)} <span class="muted tiny">${dur(r.seconds)}</span></span>
+      <div class="track">${privacy}${r.bars.map(([a, b]) => bar(a, b, CAP_COLORS[r.key], `${esc(r.label)} ${fmtTime(a)}–${fmtTime(b)}`)).join('')}</div></div>`).join('');
+  $('#cap-lanes').innerHTML = rows + tlAxis();
+  $('#cap-meta').textContent = c.privacy.length ? 'Hatched = Privacy mode' : '';
+}
+function tlApplyZoom() {
+  document.querySelectorAll('.tl-scroll > .lanes').forEach((l) => (l.style.width = `${TL.zoom * 100}%`));
+}
+async function loadTimeline() {
+  if (TL.start == null) TL.start = dayStart(Date.now());
+  const d = new Date(TL.start * 1000);
+  $('#tl-day').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  $('#tl-day-label').textContent = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const q = `start=${TL.start}&end=${tlEnd()}`;
+  const [t, c] = await Promise.all([api(`/api/timeline?${q}`).catch(() => null), api(`/api/timeline/captures?${q}`).catch(() => null)]);
+  if (c) renderCaptures(c);
+  if (t) {
+    const lanes = t.lanes.map((l) => `
+    <div class="lane"><span><span style="color:${l.color}">●</span> ${esc(l.cls)} <span class="muted tiny">${Math.round(l.seconds / 60)} min</span></span>
+      <div class="track">${l.spans.map(([a, b]) => bar(a, b, l.color, `${fmtTime(a)}–${fmtTime(b)}`)).join('')}</div></div>`).join('');
+    const rules = `<div class="lane"><span><span style="color:#0E2A4F">●</span> Rule fired</span>
+      <div class="track">${t.rules.map((ts) => `<div style="left:${tlPct(ts)}%;width:3px;background:#0E2A4F" title="${fmtTime(ts)}"></div>`).join('')}</div></div>`;
+    $('#lanes').innerHTML = (lanes || '<div class="muted small">Nothing was in view long enough on this day.</div>') + rules + tlAxis();
+  }
+  tlApplyZoom();
+}
+let tlSyncing = false;
+document.querySelectorAll('.tl-scroll').forEach((el) => el.addEventListener('scroll', () => {
+  if (tlSyncing) return; tlSyncing = true;
+  document.querySelectorAll('.tl-scroll').forEach((o) => { if (o !== el) o.scrollLeft = el.scrollLeft; });
+  requestAnimationFrame(() => (tlSyncing = false));
+}));
+const tlShift = (days) => { const d = new Date(TL.start * 1000); d.setDate(d.getDate() + days); TL.start = d.getTime() / 1000; loadTimeline(); };
+$('#tl-prev').addEventListener('click', () => tlShift(-1));
+$('#tl-next').addEventListener('click', () => tlShift(1));
+$('#tl-today').addEventListener('click', () => { TL.start = dayStart(Date.now()); loadTimeline(); });
+$('#tl-day').addEventListener('change', (e) => { if (e.target.value) { TL.start = dayStart(`${e.target.value}T00:00:00`); loadTimeline(); } });
+$('#tl-zoom').addEventListener('change', async (e) => {   // keep the centre of the view in place; re-render ticks
+  const sc = document.querySelector('.tl-scroll'), frac = sc ? (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth : 0;
+  TL.zoom = Number(e.target.value);
+  await loadTimeline();
+  document.querySelectorAll('.tl-scroll').forEach((o) => (o.scrollLeft = frac * o.scrollWidth - o.clientWidth / 2));
+});
 $('#tl-refresh').addEventListener('click', loadTimeline);
 
 async function summarize(question) {
@@ -867,10 +907,10 @@ const GB = 1024 ** 3;
 async function loadMemory() {
   const m = await api('/api/memory').catch(() => null);
   if (!m) return;
-  const parts = [{ name: 'Vision Lab', bytes: m.lab_process + m.lab_gpu, color: '#F5A524' },
-    ...m.ollama.map((o, i) => ({ name: o.name, bytes: o.bytes, color: ['#C4AEFF', '#5CC8FF', '#FF8CC0'][i % 3] }))];
+  const parts = [{ name: 'Vision Lab', bytes: m.lab_process + m.lab_gpu, color: '#0D9488' },
+    ...m.ollama.map((o, i) => ({ name: o.name, bytes: o.bytes, color: ['#0E2A4F', '#2DD4BF', '#64748B'][i % 3] }))];
   const known = parts.reduce((a, p) => a + p.bytes, 0);
-  parts.push({ name: 'Everything else', bytes: Math.max(0, m.used - known), color: '#5A6472' });
+  parts.push({ name: 'Everything else', bytes: Math.max(0, m.used - known), color: '#CBD5E1' });
   $('#mem-total').textContent = `${(m.used / GB).toFixed(1)} GB of ${(m.total / GB).toFixed(0)} GB in use`;
   $('#mem-bar').innerHTML = parts.map((p) => `<div style="width:${(p.bytes / m.total) * 100}%;background:${p.color}"></div>`).join('');
   $('#mem-legend').innerHTML = parts.map((p) => `<span><span style="color:${p.color}">■</span> ${esc(p.name)} ${(p.bytes / GB).toFixed(1)} GB</span>`).join('') +
@@ -881,19 +921,64 @@ function speedBar(b) {
   if (!b) return '<span class="muted tiny">not measured</span>';
   const v = b.fps ?? 1000;
   const w = Math.max(3, Math.min(100, Math.round((Math.log10(v * 10 + 1) / Math.log10(3001)) * 100)));
-  const c = v >= 30 ? '#9BE15D' : v >= 10 ? '#F5A524' : '#FF8CC0';
+  const c = v >= 30 ? '#0D9488' : v >= 10 ? '#2DD4BF' : '#F59E0B';
   return `<div class="speed"><div class="meter"><div style="width:${w}%;background:${c}"></div></div><span class="mono tiny" style="width:64px;text-align:right">${esc(b.label)}</span></div>`;
+}
+
+function fmtDay(d) {
+  if (!d || d === 'now' || d === 'just now') return d || '';
+  const t = new Date(`${d}T12:00:00`);
+  return isNaN(t) ? d : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function benchTip(b) {
+  // Provenance lives in the hover tooltip only - nothing is shown below the number.
+  const parts = b.kind === 'published'
+    ? [`published · ${b.source || ''}`, b.note, b.url]
+    : [`measured here · ${fmtDay(b.date)}`, b.note, b.machine];
+  return parts.filter(Boolean).join('\n');
+}
+
+function benchList(r) {
+  const items = (r.benchmarks || []).map((b) =>
+    `<li class="bm-${b.kind === 'published' ? 'pub' : 'here'}" title="${esc(benchTip(b))}"><span class="bm-label">${esc(b.label)}</span> <b class="bm-val">${esc(b.value)}</b></li>`);
+  if (!(r.benchmarks || []).some((b) => b.kind === 'measured')) {
+    items.push(`<li class="bm-none"${r.measure_note ? ` title="${esc(r.measure_note)}"` : ''}><span class="bm-label">Speed &amp; memory here</span> <span class="muted">not measured</span></li>`);
+  }
+  return `<ul class="bm">${items.join('')}</ul>`;
+}
+
+function usageCell(u) {
+  if (!u) return '';
+  const where = u.where.length ? `<ul class="where">${u.where.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '';
+  const loaded = u.loaded ? `<div class="loaded"><span class="dot ok"></span>Loaded now: ${esc(u.loaded_where.join(', '))}</div>` : '';
+  return `<span class="use ${u.status}">${esc(u.label)}</span>${where}${loaded}`;
+}
+
+function actionCell(r) {
+  if (r.pulling) return '<span class="muted small">Downloading…</span>';
+  if (!r.installed) return r.kind === 'info' ? '<span class="muted small">Not installed</span>'
+    : `<button type="button" class="btn primary" data-download="${esc(r.key)}">Download</button>`;
+  return r.benchable ? `<button type="button" class="btn" data-bench="${esc(r.key)}">Benchmark</button>` : '';
 }
 
 async function loadModels() {
   loadMemory();
   const rows = await api('/api/models').catch(() => []);
-  $('#catalog tbody').innerHTML = rows.map((r) => `
-    <tr><td class="muted">${esc(r.task)}</td><td><b>${esc(r.name)}</b></td><td class="muted small">${esc(r.gives)}</td>
-      <td><span class="hw ${r.hw}">${r.hw}</span></td><td>${speedBar(r.bench)}</td>
-      <td>${r.pulling ? '<span class="muted small">Downloading…</span>'
-        : r.installed ? `<button type="button" class="btn" data-bench="${esc(r.key)}">Benchmark</button>`
-        : `<button type="button" class="btn primary" data-download="${esc(r.key)}">Download</button>`}</td></tr>`).join('');
+  const n = (st) => rows.filter((r) => r.usage && r.usage.status === st).length;
+  const sum = $('#catalog-summary');
+  if (sum) sum.textContent = rows.length ? `${n('active')} in use · ${n('on_demand')} on demand · ${n('idle')} not in use · ${rows.filter((r) => r.usage && r.usage.loaded).length} loaded now` : '';
+  let group = '';
+  $('#catalog tbody').innerHTML = rows.map((r) => {
+    const head = r.group && r.group !== group ? `<tr class="group"><th colspan="6" scope="colgroup">${esc(group = r.group)}</th></tr>` : '';
+    return `${head}
+    <tr class="use-${r.usage ? r.usage.status : 'idle'}"><td data-label="Model"><b>${esc(r.name)}</b>${r.bench ? `<div class="live-bench">${speedBar(r.bench)}</div>` : ''}</td>
+      <td data-label="In use">${usageCell(r.usage)}</td>
+      <td data-label="What it does"><div class="task">${esc(r.task)}</div><div class="gives">${esc(r.gives)}</div></td>
+      <td data-label="Benchmarks">${benchList(r)}</td>
+      <td data-label="Runs on"><span class="hw ${r.hw}">${r.hw}</span></td>
+      <td data-label="">${actionCell(r)}</td></tr>`;
+  }).join('');
   const dets = ['yolo11n', 'yolo11s', 'yolov8s-worldv2', 'yolo11s-seg'];
   const opt = (sel) => dets.map((d) => `<option ${d === sel ? 'selected' : ''}>${d}</option>`).join('');
   if (!$('#ab-a').options.length) {
@@ -960,7 +1045,7 @@ async function loadScreens() {
     img.onerror = () => { img.replaceWith(Object.assign(document.createElement('div'), { className: 'small', textContent: '(image pruned)' })); };
     a.appendChild(img);
     const cap = document.createElement('figcaption');
-    const t = new Date(it.capture_ts * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    const t = VLTime.dayTime(it.capture_ts);
     cap.innerHTML = '<div class="mono small"></div><div></div>';
     cap.firstChild.textContent = `${t}${it.label ? ' · ' + it.label : ''}${it.gemma_ms ? ' · ' + (it.gemma_ms / 1000).toFixed(1) + 's' : ''}`;
     cap.lastChild.textContent = it.status === 'ok' ? (it.caption || '').replace(/^\w+\s*-\s*/, '') : `(${it.status})`;

@@ -44,7 +44,7 @@ _TERMS_PATH = _os.environ.get("VLAB_REDACT_TERMS") or _os.path.join(_os.path.dir
 _LOCAL_TERMS = [t.strip() for t in open(_TERMS_PATH).read().splitlines() if t.strip() and not t.startswith("#")] if _os.path.exists(_TERMS_PATH) else []
 LOCAL_BLOCK = re.compile(r"(?i)\b(" + "|".join(re.escape(t) for t in _LOCAL_TERMS) + r")\b") if _LOCAL_TERMS else None
 
-# HOU-88: personal places/employers/ZIPs are also kept out of the repo: one term per line in
+# personal places/employers/ZIPs are also kept out of the repo: one term per line in
 # data/redaction_title_terms.txt (local, untracked). They deny window titles and are masked as [LOCAL_TERM] in text.
 _TITLE_TERMS_PATH = _os.environ.get("VLAB_REDACT_TITLE_TERMS") or _os.path.join(_os.path.dirname(_TERMS_PATH), "redaction_title_terms.txt")
 _TITLE_TERMS = [t.strip() for t in open(_TITLE_TERMS_PATH).read().splitlines() if t.strip() and not t.startswith("#")] if _os.path.exists(_TITLE_TERMS_PATH) else []

@@ -3,8 +3,7 @@
 import AppKit
 
 let home = FileManager.default.homeDirectoryForCurrentUser.path
-let repo = "\(home)/Documents/dev/vision-lab"
-let planner = "\(home)/Documents/dev/week-planner"
+let repo = ProcessInfo.processInfo.environment["VLAB_REPO"] ?? "\(home)/vision-lab"   // path to this checkout
 let uiURL = URL(string: "http://127.0.0.1:8765")!
 
 struct Svc { let name: String; let dir: String; let cmd: String }
@@ -12,7 +11,6 @@ let services = [
     Svc(name: "server", dir: repo, cmd: "exec ./run.sh >> data/server.log 2>&1"),
     Svc(name: "planloop", dir: repo, cmd: "exec .venv/bin/python -m vision_lab.planloop run >> data/planloop.log 2>&1"),
     Svc(name: "vlabbatch", dir: repo, cmd: "exec taskpolicy -b .venv/bin/python -m vision_lab.batch loop >> data/batch.log 2>&1"),
-    Svc(name: "weekplanner", dir: planner, cmd: "exec /usr/bin/python3 server.py >> planner.log 2>&1"),
 ]
 
 final class App: NSObject, NSApplicationDelegate {

@@ -33,7 +33,7 @@ DEFAULT_SETTINGS = {
     "describe_every": 10,
     # Home tuning: only these COCO classes are detected (empty = all 80)
     "home_classes": "person, dog, couch, bed, chair, dining table, tv, laptop, cell phone, remote, book, cup, bottle, bowl, wine glass, refrigerator, oven, microwave, sink, backpack, handbag, potted plant, clock, keyboard, mouse",
-    # Common mislabels in this apartment get folded into the right class
+    # Common mislabels in this room get folded into the right class
     "relabel": {"cat": "dog", "teddy bear": "dog", "sheep": "dog", "bear": "dog"},
     # Stricter per-class thresholds for flaky small objects
     "class_conf": {"remote": 0.45, "cell phone": 0.4, "book": 0.4, "bottle": 0.4, "wine glass": 0.45, "clock": 0.45},
@@ -128,12 +128,23 @@ def segments_cross(p1, p2, q1, q2):
             and orient(q1, q2, p1) * orient(q1, q2, p2) < 0)
 
 
+def notify_capture(engine, stopping):
+    """Recording mode hook: stopping=True runs before the camera is released (privacy / pause on),
+    False after capture resumes. Listeners must not raise into the privacy path."""
+    for cb in list(getattr(engine, "capture_listeners", [])):
+        try:
+            cb(stopping)
+        except Exception as e:
+            print(f"[engine] capture listener failed: {e}")
+
+
 class Camera:
     def __init__(self, paused=False):
         self.lock = threading.Lock()
         self.frame, self.seq, self.ts, self.fps = None, 0, 0.0, 0.0
         self.index, self.cap, self.error = None, None, None
         self.writer, self.recording_path, self.recording_since = None, None, None
+        self.sinks = []                       # recording mode: fn(frame, ts) per grabbed frame; must not block
         self._want, self.paused = None, bool(paused)
         self.cap_lock = threading.Lock()      # guards every open/read/release of self.cap
         self.released = threading.Event()     # set while no capture handle is open
@@ -241,6 +252,11 @@ class Camera:
                 self.seq += 1
                 if self.writer is not None:
                     self.writer.write(frame)
+            for sink in self.sinks:
+                try:
+                    sink(frame, now)
+                except Exception:
+                    pass
 
     def latest(self):
         with self.lock:
@@ -326,7 +342,7 @@ class Engine:
         self.zones = store.get_config("zones", [])
         self.rules = store.get_config("rules", DEFAULT_RULES)
         if self.settings.get("camera_paused") and "capture_paused" not in saved:
-            self.settings["capture_paused"] = True   # HOU-146: migrate the old camera-only pause
+            self.settings["capture_paused"] = True   # migrate the old camera-only pause
         self.camera = Camera(paused=bool(self.settings.get("capture_paused") or self.settings.get("camera_paused")))
         self.models = Models()
         self.embedder = llm.Embedder()
@@ -342,6 +358,7 @@ class Engine:
         if not os.environ.get("VLAB_NO_CAMERA"):   # test servers run without touching the camera
             self.camera.open(self.settings["camera"])   # no-op while paused (state survives restarts)
 
+        self.capture_listeners = []   # recording mode: fn(stopping) on privacy / camera pause changes
         self.tracks, self.rule_last = {}, {}
         self.active_model, self.world_set = None, None
         self.out_lock = threading.Lock()
@@ -372,6 +389,7 @@ class Engine:
     def set_camera_paused(self, paused):
         """Pause releases the camera device; resume reopens it. Persisted and logged to the timeline."""
         if paused:
+            notify_capture(self, True)     # recording mode stops mic, video and screen first
             released = self.camera.pause()
             self.event("camera_paused", "Camera paused (device released)" if released
                        else "Camera paused (release still pending)", "#A3AFBD")
@@ -383,16 +401,19 @@ class Engine:
         if self.settings.get("camera_paused") != bool(paused):
             self.settings = {**self.settings, "camera_paused": bool(paused)}
             self.store.set_config("settings", self.settings)
+        if not paused:
+            notify_capture(self, False)
         return {"paused": self.camera.paused, "released": released if paused else False}
 
     def set_capture_paused(self, paused):
-        """HOU-146 Privacy mode: pause ALL capture: camera (device released), mic (remembering its prior state)
+        """Privacy mode: pause ALL capture: camera (device released), mic (remembering its prior state)
         and screen captures (planloop reads settings.capture_paused before every screencapture)."""
         paused = bool(paused)
         was = bool(self.settings.get("capture_paused"))
         mic_on = bool(self.store.get_config("mic_enabled", True))
         patch = {"capture_paused": paused, "camera_paused": paused}
         if paused:
+            notify_capture(self, True)     # recording mode stops mic, video and screen before anything else
             released = self.camera.pause()
             if not was:
                 patch["capture_mic_prev"] = mic_on
@@ -410,6 +431,8 @@ class Engine:
                        else "Privacy mode on (camera release still pending)", "#A3AFBD")
         elif was and not paused:
             self.event("capture_resumed", "Privacy mode off (capture resumed)", "#5BD38A")
+        if not paused:
+            notify_capture(self, False)
         return {"paused": paused, "capture_paused": paused, "privacy_mode": paused, "camera_paused": self.camera.paused,
                 "released": released if paused else False,
                 "mic_enabled": bool(self.store.get_config("mic_enabled", True))}
