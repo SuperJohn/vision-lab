@@ -112,3 +112,9 @@ weights/         downloaded model weights (git-ignored)
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Cloudflare Pages (portfolio demo)
+
+Static demo site root: `site/`. Sample JSON: `demo/data/data.json` (mirrored at `site/assets/data.json` for the browser).
+
+Suggested Pages project: **vision-lab** · Production branch `main` · Framework none · Root directory `site` · no build command.
