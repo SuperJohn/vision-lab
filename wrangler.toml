@@ -1,0 +1,6 @@
+# Cloudflare Pages — suggested project name: vision-lab
+# Dashboard: Framework preset = None, Build command = (empty),
+# Output / root directory = site, Production branch = main
+name = "vision-lab"
+compatibility_date = "2026-10-28"
+pages_build_output_dir = "site"
