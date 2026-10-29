@@ -1,0 +1,28 @@
+{
+ "synthetic": true,
+ "home": "Demo Apartment (fictional)",
+ "seed": 42,
+ "first_day": "2026-10-19",
+ "last_day": "2026-10-25",
+ "tz": "America/Los_Angeles",
+ "note": "All rows are generated from a fixed seed. No camera frames, voices or people from real homes.",
+ "plan_blocks": [
+  {"id": "pb-2026-10-19-0", "day": "2026-10-19", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792429561.0, "planned_end": 1792429861.0, "status": "nudged"},
+  {"id": "pb-2026-10-19-1", "day": "2026-10-19", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792447389.0, "planned_end": 1792447689.0, "status": "nudged"},
+  {"id": "pb-2026-10-20-2", "day": "2026-10-20", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792515723.0, "planned_end": 1792516023.0, "status": "nudged"},
+  {"id": "pb-2026-10-20-3", "day": "2026-10-20", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792523081.0, "planned_end": 1792523381.0, "status": "nudged"},
+  {"id": "pb-2026-10-20-4", "day": "2026-10-20", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792533528.0, "planned_end": 1792533828.0, "status": "nudged"},
+  {"id": "pb-2026-10-20-5", "day": "2026-10-20", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792541942.0, "planned_end": 1792542242.0, "status": "nudged"},
+  {"id": "pb-2026-10-21-6", "day": "2026-10-21", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792602588.0, "planned_end": 1792602888.0, "status": "nudged"},
+  {"id": "pb-2026-10-21-7", "day": "2026-10-21", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792609132.0, "planned_end": 1792609432.0, "status": "nudged"},
+  {"id": "pb-2026-10-21-8", "day": "2026-10-21", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792620285.0, "planned_end": 1792620585.0, "status": "nudged"},
+  {"id": "pb-2026-10-21-9", "day": "2026-10-21", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792627954.0, "planned_end": 1792628254.0, "status": "nudged"},
+  {"id": "pb-2026-10-22-10", "day": "2026-10-22", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792688469.0, "planned_end": 1792688769.0, "status": "nudged"},
+  {"id": "pb-2026-10-22-11", "day": "2026-10-22", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792695644.0, "planned_end": 1792695944.0, "status": "nudged"},
+  {"id": "pb-2026-10-22-12", "day": "2026-10-22", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792706624.0, "planned_end": 1792706924.0, "status": "nudged"},
+  {"id": "pb-2026-10-23-13", "day": "2026-10-23", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792775154.0, "planned_end": 1792775454.0, "status": "nudged"},
+  {"id": "pb-2026-10-23-14", "day": "2026-10-23", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792782270.0, "planned_end": 1792782570.0, "status": "nudged"},
+  {"id": "pb-2026-10-23-15", "day": "2026-10-23", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792793002.0, "planned_end": 1792793302.0, "status": "nudged"},
+  {"id": "pb-2026-10-23-16", "day": "2026-10-23", "task": "Stand up and stretch", "linear_issue": null, "planned_start": 1792800977.0, "planned_end": 1792801277.0, "status": "nudged"}
+ ]
+}

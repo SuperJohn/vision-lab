@@ -1,0 +1,33 @@
+{
+ "app": "vision-lab",
+ "synthetic": true,
+ "home": "Demo Apartment (fictional)",
+ "seed": 42,
+ "first_day": "2026-10-19",
+ "last_day": "2026-10-25",
+ "tz": "America/Los_Angeles",
+ "note": "All rows are generated from a fixed seed. No camera frames, voices or people from real homes.",
+ "generator": "demo/generate_data.py",
+ "rows": {
+  "events": 1124,
+  "presence": 197,
+  "keyframes": 184,
+  "batch_annotations": 184,
+  "utterances": 24,
+  "days": 7,
+  "zones": 5,
+  "rules": 5,
+  "plan_blocks": 17
+ },
+ "unchanged": ["data.json (public showcase aggregates; served as site/assets/data.json)"],
+ "files": [
+  {"name": "config.json", "bytes": 2373, "sha256": "c4b0c7c7ed86a78585059448fdd77017d90bec591b2fb6bbf3b6c00302edc559"},
+  {"name": "events.json", "bytes": 351432, "sha256": "c8cd8e6d65bd1e5fdcc5791b65f512751d0ac84db4ea0e2051f2de46da3a75f3"},
+  {"name": "presence.json", "bytes": 18613, "sha256": "80f94644ea2ad20be8889c372f7b7a7fa309a871c4f0b768ac347e844ab39179"},
+  {"name": "keyframes.json", "bytes": 32890, "sha256": "e85b9dc7a052a9f839d912d6de67f3a7bfbb793a63654ac0331ba3ed19686e83"},
+  {"name": "batch_annotations.json", "bytes": 108224, "sha256": "a32d195e4df7517e7f356eceda6aababe970621beb6fa5f30a140fa0ca9b3aea"},
+  {"name": "utterances.json", "bytes": 8026, "sha256": "16aa0083644f56602ef1591427fd6beb5c0bde832709446804d9bdb3da07c8b3"},
+  {"name": "daily_metrics.json", "bytes": 3472, "sha256": "0587c15aa0898c1dd4d2e737d82e0648983d7e2d1b2f097abb052d335d2177e4"},
+  {"name": "plan_blocks.json", "bytes": 3422, "sha256": "e463bec8c29e845713639f8662a18dd8e6867f227778b12619609ad27dde9ba3"}
+ ]
+}

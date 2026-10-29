@@ -1,0 +1,23 @@
+{
+ "synthetic": true,
+ "home": "Demo Apartment (fictional)",
+ "seed": 42,
+ "first_day": "2026-10-19",
+ "last_day": "2026-10-25",
+ "tz": "America/Los_Angeles",
+ "note": "All rows are generated from a fixed seed. No camera frames, voices or people from real homes.",
+ "zones": [
+  {"id": "z-couch", "name": "Couch", "kind": "zone", "points": [[0.05, 0.55], [0.42, 0.55], [0.42, 0.92], [0.05, 0.92]]},
+  {"id": "z-desk", "name": "Desk", "kind": "zone", "points": [[0.62, 0.4], [0.96, 0.4], [0.96, 0.85], [0.62, 0.85]]},
+  {"id": "z-kitchen", "name": "Kitchen", "kind": "zone", "points": [[0.4, 0.18], [0.7, 0.18], [0.7, 0.5], [0.4, 0.5]]},
+  {"id": "z-dogbed", "name": "Dog bed", "kind": "zone", "points": [[0.2, 0.88], [0.34, 0.88], [0.34, 0.99], [0.2, 0.99]]},
+  {"id": "l-door", "name": "Front door", "kind": "line", "points": [[0.02, 0.2], [0.02, 0.6]]}
+ ],
+ "rules": [
+  {"id": "r-arrive", "name": "Someone comes in", "enabled": true, "object": "person", "event": "appears", "target": null, "duration_s": 0, "posture": "any", "direction": "any", "cooldown_s": 120, "actions": {"notify": false, "snapshot": true, "vlm_prompt": "Describe the person who just came into view and what they are carrying. One sentence."}},
+  {"id": "r-floor", "name": "Person lying down", "enabled": true, "object": "person", "event": "posture_change", "target": null, "duration_s": 0, "posture": "lying", "direction": "any", "cooldown_s": 300, "actions": {"notify": true, "snapshot": true, "vlm_prompt": ""}},
+  {"id": "r-desk-long", "name": "Desk stretch over 90 min", "enabled": true, "object": "person", "event": "in_zone_for", "target": "z-desk", "duration_s": 5400, "posture": "sitting", "direction": "any", "cooldown_s": 1800, "actions": {"notify": true, "snapshot": false, "vlm_prompt": ""}},
+  {"id": "r-dog-kitchen", "name": "Dog in the kitchen", "enabled": true, "object": "dog", "event": "enters_zone", "target": "z-kitchen", "duration_s": 0, "posture": "any", "direction": "any", "cooldown_s": 600, "actions": {"notify": false, "snapshot": true, "vlm_prompt": "Is the dog near any food? One sentence."}},
+  {"id": "r-door", "name": "Front door crossing", "enabled": true, "object": "person", "event": "crosses_line", "target": "l-door", "duration_s": 0, "posture": "any", "direction": "any", "cooldown_s": 60, "actions": {"notify": false, "snapshot": true, "vlm_prompt": ""}}
+ ]
+}

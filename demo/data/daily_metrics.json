@@ -1,0 +1,18 @@
+{
+ "synthetic": true,
+ "home": "Demo Apartment (fictional)",
+ "seed": 42,
+ "first_day": "2026-10-19",
+ "last_day": "2026-10-25",
+ "tz": "America/Los_Angeles",
+ "note": "All rows are generated from a fixed seed. No camera frames, voices or people from real homes.",
+ "days": [
+  {"day": "2026-10-19", "weekday": "Mon", "events_by_kind": {"activity_slice": 46, "line": 4, "posture": 12, "rule": 10, "scene": 50, "track": 34, "zone": 27}, "activity_minutes_by_label": {"empty": 360, "work": 210, "couch": 190, "kitchen": 115, "away": 100, "at_desk": 85, "browsing": 85, "video": 45, "chat": 20}, "desk_hours": 6.85, "couch_hours": 4.04, "vlm_p50_ms": 939, "vlm_p95_ms": 1046, "vlm_calls": 46, "privacy_pauses": 0, "uptime_pct": 99.9},
+  {"day": "2026-10-20", "weekday": "Tue", "events_by_kind": {"activity_slice": 46, "line": 4, "posture": 12, "rule": 10, "scene": 50, "track": 33, "zone": 25}, "activity_minutes_by_label": {"empty": 360, "work": 225, "couch": 205, "kitchen": 115, "away": 100, "at_desk": 90, "browsing": 90, "video": 45, "chat": 25}, "desk_hours": 7.4, "couch_hours": 4.21, "vlm_p50_ms": 903, "vlm_p95_ms": 1009, "vlm_calls": 46, "privacy_pauses": 0, "uptime_pct": 99.8},
+  {"day": "2026-10-21", "weekday": "Wed", "events_by_kind": {"activity_slice": 45, "capture_paused": 1, "capture_resumed": 1, "line": 4, "posture": 12, "rule": 12, "scene": 49, "sound": 1, "track": 38, "zone": 27}, "activity_minutes_by_label": {"empty": 360, "work": 210, "couch": 190, "kitchen": 115, "away": 110, "at_desk": 100, "browsing": 95, "video": 40, "chat": 30}, "desk_hours": 7.47, "couch_hours": 4.01, "vlm_p50_ms": 914, "vlm_p95_ms": 1028, "vlm_calls": 45, "privacy_pauses": 1, "uptime_pct": 98.7},
+  {"day": "2026-10-22", "weekday": "Thu", "events_by_kind": {"activity_slice": 46, "line": 4, "posture": 12, "rule": 10, "scene": 50, "track": 26, "zone": 26}, "activity_minutes_by_label": {"empty": 360, "work": 215, "couch": 185, "kitchen": 135, "at_desk": 105, "away": 90, "browsing": 85, "video": 45, "chat": 25}, "desk_hours": 7.42, "couch_hours": 3.93, "vlm_p50_ms": 907, "vlm_p95_ms": 1029, "vlm_calls": 46, "privacy_pauses": 0, "uptime_pct": 98.7},
+  {"day": "2026-10-23", "weekday": "Fri", "events_by_kind": {"activity_slice": 45, "line": 4, "posture": 12, "rule": 9, "scene": 49, "track": 31, "zone": 24}, "activity_minutes_by_label": {"empty": 360, "work": 215, "couch": 190, "away": 105, "kitchen": 100, "at_desk": 100, "browsing": 95, "video": 45, "chat": 25}, "desk_hours": 7.42, "couch_hours": 4.05, "vlm_p50_ms": 904, "vlm_p95_ms": 999, "vlm_calls": 45, "privacy_pauses": 0, "uptime_pct": 99.0},
+  {"day": "2026-10-24", "weekday": "Sat", "events_by_kind": {"activity_slice": 30, "line": 2, "posture": 6, "rule": 3, "scene": 34, "sound": 1, "track": 17, "zone": 13}, "activity_minutes_by_label": {"empty": 360, "couch": 335, "away": 275, "kitchen": 85, "social": 70, "email_admin": 55}, "desk_hours": 0.93, "couch_hours": 6.85, "vlm_p50_ms": 885, "vlm_p95_ms": 979, "vlm_calls": 30, "privacy_pauses": 0, "uptime_pct": 99.3},
+  {"day": "2026-10-25", "weekday": "Sun", "events_by_kind": {"activity_slice": 30, "line": 2, "posture": 6, "rule": 2, "scene": 34, "sound": 1, "track": 18, "zone": 12}, "activity_minutes_by_label": {"empty": 360, "couch": 340, "away": 270, "kitchen": 100, "social": 70, "email_admin": 40}, "desk_hours": 0.71, "couch_hours": 6.95, "vlm_p50_ms": 937, "vlm_p95_ms": 1014, "vlm_calls": 30, "privacy_pauses": 0, "uptime_pct": 99.4}
+ ]
+}
